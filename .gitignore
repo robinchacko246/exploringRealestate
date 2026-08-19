@@ -24,6 +24,10 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Lovable Cloud
+.lovable/
+
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
