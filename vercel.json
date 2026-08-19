@@ -1,15 +1,11 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/client",
-  "framework": "vite",
+  "buildCommand": "npx vite build --config vite.config.vercel.ts",
+  "outputDirectory": "dist",
+  "framework": null,
   "rewrites": [
     {
-      "source": "/assets/(.*)",
-      "destination": "/assets/$1"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/api"
+      "destination": "/index.html"
     }
   ]
 }
