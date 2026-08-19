@@ -30,9 +30,10 @@ function AIPage() {
   const [selectedClient, setSelectedClient] = useState<string>("");
   const qc = useQueryClient();
 
-  const extract = useServerFn(extractRequirement);
-  const match = useServerFn(matchProperties);
-  const save = useServerFn(saveExtractedRequirement);
+  const extract = extractRequirement;
+  const match = matchProperties;
+  const save = saveExtractedRequirement;
+
 
   const { data: clients = [] } = useQuery({
     queryKey: ["clients-min"],

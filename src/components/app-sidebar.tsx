@@ -27,7 +27,6 @@ import { useAuth } from "@/hooks/use-auth";
 
 const main = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard },
-  { title: "AI Assistant", url: "/app/ai", icon: Sparkles },
   { title: "Clients", url: "/app/clients", icon: Users },
   { title: "Requirements", url: "/app/requirements", icon: ListChecks },
   { title: "Properties", url: "/app/properties", icon: Building2 },

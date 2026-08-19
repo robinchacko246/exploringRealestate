@@ -22,9 +22,29 @@ function AuthPage() {
   const [name, setName] = useState("");
 
   useEffect(() => {
-    // Check for OAuth error parameters in URL query/hash
+    // Handle OAuth callback: exchange #access_token hash fragment into a session
     const hash = window.location.hash;
     const search = window.location.search;
+
+    if (hash.includes("access_token")) {
+      const params = new URLSearchParams(hash.replace("#", ""));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
+          if (error) {
+            toast.error(`Sign-in failed: ${error.message}`);
+          } else {
+            // Clean up the URL and redirect
+            window.history.replaceState({}, document.title, window.location.pathname);
+            navigate({ to: "/app" });
+          }
+        });
+        return;
+      }
+    }
+
+    // Check for OAuth error parameters
     if (hash.includes("error") || search.includes("error")) {
       const params = new URLSearchParams(hash.replace("#", "?") || search);
       const errorDesc = params.get("error_description") || params.get("error");
@@ -74,43 +94,6 @@ function AuthPage() {
     }
   };
 
-  const handleDemoSignIn = async () => {
-    setLoading(true);
-    const demoEmail = "demo@propertyflow.com";
-    const demoPass = "propertyflow123";
-    try {
-      let { error } = await supabase.auth.signInWithPassword({
-        email: demoEmail,
-        password: demoPass,
-      });
-
-      if (error) {
-        const signUpRes = await supabase.auth.signUp({
-          email: demoEmail,
-          password: demoPass,
-          options: { data: { full_name: "Demo Agent" } },
-        });
-        if (!signUpRes.error) {
-          const retryRes = await supabase.auth.signInWithPassword({
-            email: demoEmail,
-            password: demoPass,
-          });
-          if (retryRes.error) {
-            return toast.error(retryRes.error.message);
-          }
-        } else {
-          return toast.error(signUpRes.error.message);
-        }
-      }
-
-      toast.success("Signed in as Demo Agent!");
-      navigate({ to: "/app" });
-    } catch (err: any) {
-      toast.error(err?.message || "Demo sign in failed. Please check network connection.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGoogle = async () => {
     setLoading(true);
@@ -192,15 +175,6 @@ function AuthPage() {
             Continue with Google
           </Button>
 
-          <Button
-            variant="secondary"
-            className="mt-2 w-full"
-            onClick={handleDemoSignIn}
-            disabled={loading}
-          >
-            <Sparkles className="mr-2 h-4 w-4 text-primary" />
-            Quick Demo Sign In
-          </Button>
 
           <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
