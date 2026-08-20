@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("https://fonts.gstatic.com/s/spacegrotesk/v16/V8mDoQDjQSkFtoMM3T6r8E7mF71Q-gOoraIAEj7oUUxjKw.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "DM Sans";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHTWEBlw.woff2") format("woff2");
+  }
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Light = warm paper with deep slate text + WhatsApp emerald */
+  --background: oklch(0.99 0.005 180);
+  --foreground: oklch(0.18 0.02 220);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.02 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.02 220);
+
+  --primary: oklch(0.62 0.13 165);          /* WhatsApp emerald #00a884 */
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-glow: oklch(0.72 0.16 165);
+
+  --secondary: oklch(0.96 0.01 220);
+  --secondary-foreground: oklch(0.22 0.02 220);
+
+  --muted: oklch(0.96 0.008 220);
+  --muted-foreground: oklch(0.5 0.02 220);
+
+  --accent: oklch(0.94 0.04 165);
+  --accent-foreground: oklch(0.25 0.08 165);
+
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.65 0.15 155);
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.78 0.15 70);
+  --warning-foreground: oklch(0.2 0.05 70);
+
+  --border: oklch(0.92 0.008 220);
+  --input: oklch(0.92 0.008 220);
+  --ring: oklch(0.62 0.13 165);
+
+  --chat-incoming: oklch(1 0 0);
+  --chat-outgoing: oklch(0.92 0.07 165);
+
+  --sidebar: oklch(0.22 0.02 220);          /* slate #111b21-ish */
+  --sidebar-foreground: oklch(0.92 0.01 220);
+  --sidebar-primary: oklch(0.62 0.13 165);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.27 0.02 220);
+  --sidebar-accent-foreground: oklch(0.99 0 0);
+  --sidebar-border: oklch(0.3 0.015 220);
+  --sidebar-ring: oklch(0.62 0.13 165);
+
+  --gradient-hero: linear-gradient(135deg, oklch(0.22 0.02 220) 0%, oklch(0.18 0.04 200) 60%, oklch(0.3 0.08 165) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--primary), var(--primary-glow));
+  --shadow-soft: 0 1px 3px oklch(0.18 0.02 220 / 0.06), 0 8px 24px -8px oklch(0.18 0.02 220 / 0.1);
+  --shadow-glow: 0 10px 40px -10px oklch(0.62 0.13 165 / 0.45);
+}
+
+.dark {
+  --background: oklch(0.16 0.015 220);
+  --foreground: oklch(0.96 0.005 220);
+  --card: oklch(0.2 0.015 220);
+  --card-foreground: oklch(0.96 0.005 220);
+  --popover: oklch(0.2 0.015 220);
+  --popover-foreground: oklch(0.96 0.005 220);
+  --primary: oklch(0.68 0.14 165);
+  --primary-foreground: oklch(0.12 0.02 220);
+  --primary-glow: oklch(0.78 0.16 165);
+  --secondary: oklch(0.25 0.02 220);
+  --secondary-foreground: oklch(0.96 0.005 220);
+  --muted: oklch(0.24 0.015 220);
+  --muted-foreground: oklch(0.7 0.015 220);
+  --accent: oklch(0.3 0.06 165);
+  --accent-foreground: oklch(0.96 0.005 220);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --success: oklch(0.7 0.15 155);
+  --success-foreground: oklch(0.12 0.02 220);
+  --warning: oklch(0.78 0.15 70);
+  --warning-foreground: oklch(0.18 0.04 70);
+  --border: oklch(0.28 0.015 220);
+  --input: oklch(0.28 0.015 220);
+  --ring: oklch(0.68 0.14 165);
+  --chat-incoming: oklch(0.25 0.02 220);
+  --chat-outgoing: oklch(0.36 0.07 165);
+  --sidebar: oklch(0.13 0.02 220);
+  --sidebar-foreground: oklch(0.92 0.01 220);
+  --sidebar-primary: oklch(0.68 0.14 165);
+  --sidebar-primary-foreground: oklch(0.12 0.02 220);
+  --sidebar-accent: oklch(0.2 0.02 220);
+  --sidebar-accent-foreground: oklch(0.96 0.005 220);
+  --sidebar-border: oklch(0.25 0.02 220);
+  --sidebar-ring: oklch(0.68 0.14 165);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1, h2, h3, h4, h5 {
+    font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
