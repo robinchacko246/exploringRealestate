@@ -22,29 +22,15 @@ function AuthPage() {
   const [name, setName] = useState("");
 
   useEffect(() => {
-    // Handle OAuth callback: exchange #access_token hash fragment into a session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        navigate({ to: "/app" });
+      }
+    });
+
+    // Check for OAuth error parameters in URL query/hash
     const hash = window.location.hash;
     const search = window.location.search;
-
-    if (hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.replace("#", ""));
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-      if (accessToken && refreshToken) {
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
-          if (error) {
-            toast.error(`Sign-in failed: ${error.message}`);
-          } else {
-            // Clean up the URL and redirect
-            window.history.replaceState({}, document.title, window.location.pathname);
-            navigate({ to: "/app" });
-          }
-        });
-        return;
-      }
-    }
-
-    // Check for OAuth error parameters
     if (hash.includes("error") || search.includes("error")) {
       const params = new URLSearchParams(hash.replace("#", "?") || search);
       const errorDesc = params.get("error_description") || params.get("error");
@@ -56,6 +42,8 @@ function AuthPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: "/app" });
     });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
