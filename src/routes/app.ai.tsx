@@ -45,16 +45,14 @@ function AIPage() {
 
   const runMut = useMutation({
     mutationFn: async () => {
-      const r = await extract({ data: { message, clientName: clientName || undefined } });
+      const r = await extract({ message, clientName: clientName || undefined });
       const m = await match({
-        data: {
-          property_type: r.property_type,
-          location: r.location,
-          budget_min: r.budget_min,
-          budget_max: r.budget_max,
-          land_size_cents: r.land_size_cents,
-          bhk: r.bhk,
-        },
+        property_type: r.property_type,
+        location: r.location,
+        budget_min: r.budget_min,
+        budget_max: r.budget_max,
+        land_size_cents: r.land_size_cents,
+        bhk: r.bhk,
       });
       return { r, m };
     },
@@ -69,7 +67,7 @@ function AIPage() {
   const saveMut = useMutation({
     mutationFn: async () => {
       if (!extracted || !selectedClient) throw new Error("Pick a client first");
-      return save({ data: { client_id: selectedClient, extracted } });
+      return save({ client_id: selectedClient, extracted });
     },
     onSuccess: () => {
       toast.success("Requirement saved to client");
