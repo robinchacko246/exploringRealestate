@@ -23,8 +23,8 @@ function AuthPage() {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-        navigate({ to: "/app" });
+      if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED")) {
+        navigate({ to: "/app", replace: true });
       }
     });
 
@@ -40,7 +40,7 @@ function AuthPage() {
     }
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/app" });
+      if (data.session) navigate({ to: "/app", replace: true });
     });
 
     return () => subscription.unsubscribe();
@@ -51,12 +51,15 @@ function AuthPage() {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return toast.error(error.message);
-      toast.success("Welcome back!");
-      navigate({ to: "/app" });
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+      } else {
+        toast.success("Welcome back!");
+        navigate({ to: "/app", replace: true });
+      }
     } catch (err: any) {
       toast.error(err?.message || "Sign in failed");
-    } finally {
       setLoading(false);
     }
   };
