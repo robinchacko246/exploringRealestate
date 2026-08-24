@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Phone, MessageCircle, Mail, Filter, Pencil, Trash2, User, Hash, IndianRupee, MapPin, Home, Download } from "lucide-react";
+import { Plus, Search, Phone, Filter, Pencil, Trash2, User, Hash, IndianRupee, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { usePlanLimits } from "@/hooks/use-plan-limits";
@@ -323,7 +323,7 @@ export default function ClientsPage() {
               <ul className="text-xs text-muted-foreground space-y-1 pl-4 list-disc">
                 <li>Up to 50 Clients & 60 Properties</li>
                 <li>Up to 2 Images per Property</li>
-                <li>AI Requirement Matcher & WhatsApp Inbox</li>
+                <li>AI Requirement Matcher</li>
               </ul>
             </div>
             <DialogFooter className="flex-col gap-2 sm:flex-col">
@@ -417,97 +417,63 @@ export default function ClientsPage() {
 /* ─────────────── Client Card ─────────────── */
 function ClientCard({ client: c, onEdit, onDelete }) {
   const req = c.requirements?.[0];
+  const phone = c.phone || c.whatsapp;
+  const hasBudget = req && (req.budget_min || req.budget_max);
 
   return (
-    <div className="group flex flex-col rounded-xl border border-border bg-card transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
-      {/* Top accent bar by status */}
-      <div className={`h-1 rounded-t-xl ${c.status === "hot" ? "bg-red-500" : c.status === "active" ? "bg-primary" : c.status === "cold" ? "bg-sky-400" : "bg-muted"}`} />
-
-      <div className="flex flex-1 flex-col p-5">
-        {/* Header row */}
-        <div className="flex items-start justify-between gap-2">
+    <div className="group flex flex-col justify-between rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
+      <div>
+        {/* Header: Avatar, Name & Status */}
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <Avatar name={c.name} />
-            <div className="min-w-0">
-              <div className="truncate font-semibold text-base">{c.name}</div>
-              <div className="text-xs capitalize text-muted-foreground">{c.category}</div>
-            </div>
+            <div className="truncate font-semibold text-base">{c.name}</div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <StatusBadge status={c.status} />
-          </div>
+          <StatusBadge status={c.status} />
         </div>
 
-        {/* Details grid */}
-        <div className="mt-4 space-y-2">
-          {c.phone && (
-            <DetailRow icon={Phone} label="Phone" value={c.phone} href={`tel:${c.phone}`} />
+        {/* Minimal Details: Phone & Budget */}
+        <div className="mt-3 space-y-2 text-xs">
+          {phone && (
+            <DetailRow icon={Phone} label="Phone" value={phone} href={`tel:${phone}`} />
           )}
-          {c.whatsapp && (
-            <DetailRow
-              icon={MessageCircle}
-              label="WhatsApp"
-              value={c.whatsapp}
-              href={`https://wa.me/${c.whatsapp.replace(/\D/g, "")}`}
-              accent
-            />
-          )}
-          {c.email && (
-            <DetailRow icon={Mail} label="Email" value={c.email} href={`mailto:${c.email}`} />
-          )}
-          {req && (
-            <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs">
-              <div className="flex items-center justify-between font-medium text-primary">
-                <span className="capitalize flex items-center gap-1">
-                  <Home className="h-3 w-3" /> {req.property_type || "Any Type"}
-                </span>
-                {(req.budget_min || req.budget_max) && (
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                    <IndianRupee className="h-3 w-3" />
-                    {req.budget_min ? fmtINR(req.budget_min) : "0"} – {req.budget_max ? fmtINR(req.budget_max) : "∞"}
-                  </span>
-                )}
-              </div>
-              {req.location && (
-                <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <MapPin className="h-3 w-3 shrink-0" /> {req.location}
-                  {req.bhk && <span className="ml-1">· {req.bhk} BHK</span>}
-                </div>
-              )}
-            </div>
-          )}
-          {c.notes && (
-            <div className="mt-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground leading-relaxed">
-              {c.notes}
-            </div>
-          )}
-        </div>
 
-        {/* Footer: date + actions */}
-        <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-          <span className="text-[11px] text-muted-foreground">
-            {c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}
-          </span>
-          <div className="flex gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-              onClick={onEdit}
-              title="Edit client"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-              onClick={onDelete}
-              title="Delete client"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+          <div className="flex items-center gap-2 rounded-md bg-emerald-500/8 px-2.5 py-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+            <IndianRupee className="h-3.5 w-3.5 shrink-0" />
+            <span className="text-muted-foreground font-normal min-w-[40px]">Budget</span>
+            <span>
+              {hasBudget
+                ? `${req.budget_min ? fmtINR(req.budget_min) : "0"} – ${req.budget_max ? fmtINR(req.budget_max) : "∞"}`
+                : "Not specified"}
+            </span>
           </div>
+        </div>
+      </div>
+
+      {/* Footer: Date & Actions */}
+      <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-2.5 text-xs">
+        <span className="text-[11px] text-muted-foreground">
+          {c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : ""}
+        </span>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+            onClick={onEdit}
+            title="Edit client"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+            onClick={onDelete}
+            title="Delete client"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
     </div>

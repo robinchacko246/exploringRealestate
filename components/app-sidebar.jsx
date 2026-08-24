@@ -8,7 +8,6 @@ import {
   Building2,
   BellRing,
   CreditCard,
-  MessageCircle,
   Sparkles,
   LogOut,
 } from "lucide-react";
@@ -32,8 +31,6 @@ const main = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard },
   { title: "Clients", url: "/app/clients", icon: Users },
   { title: "Properties", url: "/app/properties", icon: Building2 },
-  { title: "AI Match Assistant", url: "/app/ai", icon: Sparkles },
-  { title: "WhatsApp Inbox", url: "/app/inbox", icon: MessageCircle },
   { title: "Reminders", url: "/app/reminders", icon: BellRing },
   { title: "Billing & Plans", url: "/app/billing", icon: CreditCard },
 ];

@@ -8,8 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  CreditCard, Check, Zap, Sparkles, ShieldCheck, Clock, RefreshCw,
-  Building2, Users, ArrowRight, CheckCircle2, AlertCircle, Loader2,
+  CreditCard, Zap, ShieldCheck, Clock, CheckCircle2, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -26,11 +25,6 @@ const PLANS = [
     ...PLAN_CONFIGS.pro_realtor,
     recommended: true,
     buttonText: "Upgrade to Pro (₹499)",
-  },
-  {
-    ...PLAN_CONFIGS.agency_team,
-    recommended: false,
-    buttonText: "Upgrade to Agency (₹999)",
   },
 ];
 
@@ -228,7 +222,7 @@ export default function BillingPage() {
       {/* Plans Grid */}
       <div className="mb-12">
         <h2 className="mb-6 font-display text-xl font-bold tracking-tight">Choose the right plan for your business</h2>
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
           {PLANS.map((plan) => {
             const isCurrent = activeSub.plan_id === plan.id;
             const isProcessing = loadingPlan === plan.id;
@@ -288,9 +282,6 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Agency Features Section: Custom Branding & Team Management */}
-      <AgencyTeamFeatures planId={activeSub.plan_id} />
-
       {/* Payment History */}
       <div>
         <h2 className="mb-4 font-display text-xl font-bold tracking-tight">Payment & Invoice History</h2>
@@ -337,130 +328,6 @@ export default function BillingPage() {
             </Table>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────── Agency Team Features Component ─────────────── */
-function AgencyTeamFeatures({ planId }) {
-  const [agencyName, setAgencyName] = useState(() => typeof window !== "undefined" ? localStorage.getItem("agency_name") || "Prime Real Estate Agency" : "Prime Real Estate Agency");
-  const [agencyPhone, setAgencyPhone] = useState(() => typeof window !== "undefined" ? localStorage.getItem("agency_phone") || "+91 98765 43210" : "+91 98765 43210");
-  const [agencyTagline, setAgencyTagline] = useState(() => typeof window !== "undefined" ? localStorage.getItem("agency_tagline") || "Premium Properties & Trusted Realty Services" : "Premium Properties & Trusted Realty Services");
-
-  const [teamMembers, setTeamMembers] = useState([
-    { name: "John Doe (You)", email: "john@realty.com", role: "Agency Admin", status: "Active" },
-    { name: "Anita Sharma", email: "anita@realty.com", role: "Realtor Agent", status: "Active" },
-  ]);
-  const [inviteEmail, setInviteEmail] = useState("");
-
-  function saveBranding(e) {
-    e.preventDefault();
-    if (typeof window !== "undefined") {
-      localStorage.setItem("agency_name", agencyName);
-      localStorage.setItem("agency_phone", agencyPhone);
-      localStorage.setItem("agency_tagline", agencyTagline);
-    }
-    toast.success("Agency branding updated!");
-  }
-
-  function handleInvite(e) {
-    e.preventDefault();
-    if (!inviteEmail) return;
-    setTeamMembers((prev) => [
-      ...prev,
-      { name: inviteEmail.split("@")[0], email: inviteEmail, role: "Realtor Agent", status: "Pending Invite" },
-    ]);
-    toast.success(`Invite sent to ${inviteEmail}`);
-    setInviteEmail("");
-  }
-
-  return (
-    <div className="mb-12 space-y-6 border-t border-border pt-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="font-display text-xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" /> Custom Branding & Multi-Agent Team Management
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Configure custom agency branding on client receipts & manage multi-agent team access.
-          </p>
-        </div>
-        <Badge className={planId === "agency_team" ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}>
-          {planId === "agency_team" ? "Unlocked for Agency Team" : "Agency Team Feature"}
-        </Badge>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Custom Branding Card */}
-        <Card className="p-5 space-y-4">
-          <div className="font-semibold text-sm flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" /> Custom Agency Branding & Receipt Settings
-          </div>
-          <form onSubmit={saveBranding} className="space-y-3 text-xs">
-            <div>
-              <label className="mb-1 block font-medium">Agency Name</label>
-              <input
-                value={agencyName}
-                onChange={(e) => setAgencyName(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-medium">Agency Phone / WhatsApp Contact</label>
-              <input
-                value={agencyPhone}
-                onChange={(e) => setAgencyPhone(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-medium">Tagline / Header Note for Flyers</label>
-              <input
-                value={agencyTagline}
-                onChange={(e) => setAgencyTagline(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <Button type="submit" size="sm" className="mt-2 text-xs">
-              Save Branding Settings
-            </Button>
-          </form>
-        </Card>
-
-        {/* Multi-Agent Team Management Card */}
-        <Card className="p-5 space-y-4">
-          <div className="font-semibold text-sm flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" /> Multi-Agent Team Members
-          </div>
-
-          <form onSubmit={handleInvite} className="flex gap-2">
-            <input
-              type="email"
-              placeholder="agent@agency.com"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <Button type="submit" size="sm" className="text-xs shrink-0">
-              Invite Agent
-            </Button>
-          </form>
-
-          <div className="space-y-2">
-            {teamMembers.map((m, i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg bg-muted/40 p-2.5 text-xs border border-border/50">
-                <div>
-                  <div className="font-semibold">{m.name}</div>
-                  <div className="text-[11px] text-muted-foreground">{m.email} · {m.role}</div>
-                </div>
-                <Badge variant={m.status === "Active" ? "secondary" : "outline"} className="text-[10px]">
-                  {m.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
     </div>
   );

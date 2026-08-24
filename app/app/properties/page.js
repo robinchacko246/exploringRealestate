@@ -391,7 +391,6 @@ export default function PropertiesPage() {
               </div>
               <ul className="text-xs text-muted-foreground space-y-1.5 pl-4 list-disc">
                 <li><strong>Pro Realtor (₹499/mo)</strong>: Up to 60 Properties & 50 Clients (2 images/prop)</li>
-                <li><strong>Agency Team (₹999/mo)</strong>: Unlimited Properties, Clients & Images</li>
               </ul>
             </div>
             <DialogFooter className="flex-col gap-2 sm:flex-col">

@@ -191,7 +191,7 @@ export default function LandingPage() {
 
         <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {[
-            { i: MessageCircle, t: "WhatsApp inbox", d: "Sync your WhatsApp Business chats. Reply, broadcast, send templates — all from one dashboard." },
+            { i: MessageCircle, t: "Direct WhatsApp Contact", d: "Instantly launch WhatsApp chats with buyers & sellers directly from client profiles." },
             { i: BrainCircuit, t: "AI requirement extraction", d: "Auto-pulls budget, location, land size and property type from every chat. Zero typing." },
             { i: Users, t: "Smart client profiles", d: "Buyer, seller, investor, rental — categorized and tagged with full conversation history." },
             { i: Building2, t: "Property matching", d: "AI matches your listings to buyer requirements and suggests the next 3 leads to call." },
@@ -218,7 +218,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-12 grid gap-6 md:grid-cols-4">
             {[
-              ["01", "Client pings on WhatsApp", "Their message lands in your unified inbox."],
+              ["01", "Client pings on WhatsApp", "Receive client leads & requirements directly on WhatsApp."],
               ["02", "AI extracts the requirement", "Budget, location, type — auto-saved."],
               ["03", "Matched to your listings", "We surface the 3 best-fit properties."],
               ["04", "Reminders close the loop", "Follow-up nudges until the deal is done."],
@@ -239,7 +239,7 @@ export default function LandingPage() {
           <div className="text-xs font-semibold uppercase tracking-widest text-primary">Pricing</div>
           <h2 className="mt-2 font-display text-4xl font-bold tracking-tight">Simple plans. India-ready prices.</h2>
         </div>
-        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3 text-left">
+        <div className="mx-auto mt-12 grid max-w-3xl gap-6 md:grid-cols-2 text-left">
           {[
             {
               n: "Starter Realtor",
@@ -253,15 +253,8 @@ export default function LandingPage() {
               p: "₹499",
               s: "/mo",
               d: "For growing realtors needing higher limits & AI.",
-              f: ["Up to 50 Clients", "Up to 60 Property Listings", "Up to 2 Images per Property", "AI Requirement Matcher", "WhatsApp Direct Inbox", "Priority Support"],
+              f: ["Up to 50 Clients", "Up to 60 Property Listings", "Up to 2 Images per Property", "AI Requirement Matcher", "Priority Support"],
               hi: true,
-            },
-            {
-              n: "Agency Team",
-              p: "₹999",
-              s: "/mo",
-              d: "For agencies requiring unlimited capacity & team tools.",
-              f: ["Unlimited Clients & Listings", "Unlimited Image Uploads", "Multi-Agent Team Accounts", "Custom Branding & Receipts", "CSV Data Exports"],
             },
           ].map((tier) => (
             <div key={tier.n} className={`relative rounded-2xl border bg-card p-8 ${tier.hi ? "border-primary shadow-[var(--shadow-glow)]" : "border-border"}`}>
