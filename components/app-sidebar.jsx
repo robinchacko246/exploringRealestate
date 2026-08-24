@@ -7,6 +7,7 @@ import {
   Users,
   Building2,
   BellRing,
+  CreditCard,
   LogOut,
   Sparkles,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const main = [
   { title: "Clients", url: "/app/clients", icon: Users },
   { title: "Properties", url: "/app/properties", icon: Building2 },
   { title: "Reminders", url: "/app/reminders", icon: BellRing },
+  { title: "Billing & Plans", url: "/app/billing", icon: CreditCard },
 ];
 
 export function AppSidebar() {
