@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
   Plus, MapPin, Home, IndianRupee, Phone, User, Pencil, Trash2,
   Maximize2, BedDouble, Sparkles, MessageCircle, Mail, ChevronRight,
   CheckCircle2, XCircle, AlertCircle, SlidersHorizontal,
+  ImagePlus, X, ChevronLeft, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -47,6 +48,22 @@ const EMPTY_PROP = {
   title: "", property_type: "plot", location: "", price: "",
   land_size_cents: "", bhk: "", owner_name: "", owner_phone: "", description: "",
 };
+
+/* ─────────────── Image upload helper ─────────────── */
+async function uploadImagesToStorage(files, userId) {
+  const urls = [];
+  for (const file of files) {
+    const ext = file.name.split(".").pop();
+    const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage
+      .from("property-images")
+      .upload(path, file, { upsert: false });
+    if (error) throw error;
+    const { data } = supabase.storage.from("property-images").getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
+}
 
 /* ─────────────── Matching engine ─────────────── */
 function matchScore(property, requirement) {
@@ -129,6 +146,14 @@ export default function PropertiesPage() {
   const [selectedPropId, setSelectedPropId] = useState(null);
   const [activeTab, setActiveTab] = useState("listings");
 
+  // Image states
+  const [addImages, setAddImages] = useState([]);
+  const [addImagePreviews, setAddImagePreviews] = useState([]);
+  const [editImages, setEditImages] = useState([]);
+  const [editImagePreviews, setEditImagePreviews] = useState([]);
+  const [editExistingImages, setEditExistingImages] = useState([]);
+  const [saving, setSaving] = useState(false);
+
   const { data: properties = [] } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
@@ -156,25 +181,39 @@ export default function PropertiesPage() {
   async function handleAdd(e) {
     e.preventDefault();
     if (!user) return;
-    const fd = new FormData(e.target);
-    const payload = {
-      agent_id: user.id,
-      title: String(fd.get("title") || ""),
-      property_type: fd.get("property_type"),
-      location: String(fd.get("location") || ""),
-      price: fd.get("price") ? Number(fd.get("price")) : null,
-      land_size_cents: fd.get("land_size_cents") ? Number(fd.get("land_size_cents")) : null,
-      bhk: fd.get("bhk") ? Number(fd.get("bhk")) : null,
-      owner_name: String(fd.get("owner_name") || ""),
-      owner_phone: String(fd.get("owner_phone") || ""),
-      description: String(fd.get("description") || ""),
-    };
-    const { error } = await supabase.from("properties").insert(payload);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Property added");
-    setAddOpen(false);
-    e.target.reset();
-    qc.invalidateQueries({ queryKey: ["properties"] });
+    setSaving(true);
+    try {
+      const fd = new FormData(e.target);
+      let imageUrls = [];
+      if (addImages.length > 0) {
+        imageUrls = await uploadImagesToStorage(addImages, user.id);
+      }
+      const payload = {
+        agent_id: user.id,
+        title: String(fd.get("title") || ""),
+        property_type: fd.get("property_type"),
+        location: String(fd.get("location") || ""),
+        price: fd.get("price") ? Number(fd.get("price")) : null,
+        land_size_cents: fd.get("land_size_cents") ? Number(fd.get("land_size_cents")) : null,
+        bhk: fd.get("bhk") ? Number(fd.get("bhk")) : null,
+        owner_name: String(fd.get("owner_name") || ""),
+        owner_phone: String(fd.get("owner_phone") || ""),
+        description: String(fd.get("description") || ""),
+        images: imageUrls,
+      };
+      const { error } = await supabase.from("properties").insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Property added");
+      setAddOpen(false);
+      setAddImages([]);
+      setAddImagePreviews([]);
+      e.target.reset();
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    } catch (err) {
+      toast.error(err.message || "Failed to upload images");
+    } finally {
+      setSaving(false);
+    }
   }
 
   /* ── Edit ── */
@@ -187,24 +226,40 @@ export default function PropertiesPage() {
       owner_name: p.owner_name || "", owner_phone: p.owner_phone || "",
       description: p.description || "",
     });
+    setEditImages([]);
+    setEditImagePreviews([]);
+    setEditExistingImages(p.images || []);
   }
 
   async function handleEdit(e) {
     e.preventDefault();
-    const { error } = await supabase
-      .from("properties")
-      .update({
-        title: form.title, property_type: form.property_type,
-        location: form.location, price: form.price ? Number(form.price) : null,
-        land_size_cents: form.land_size_cents ? Number(form.land_size_cents) : null,
-        bhk: form.bhk ? Number(form.bhk) : null, owner_name: form.owner_name,
-        owner_phone: form.owner_phone, description: form.description,
-      })
-      .eq("id", editProp.id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Property updated");
-    setEditProp(null);
-    qc.invalidateQueries({ queryKey: ["properties"] });
+    setSaving(true);
+    try {
+      let newUrls = [];
+      if (editImages.length > 0) {
+        newUrls = await uploadImagesToStorage(editImages, user.id);
+      }
+      const allImages = [...editExistingImages, ...newUrls];
+      const { error } = await supabase
+        .from("properties")
+        .update({
+          title: form.title, property_type: form.property_type,
+          location: form.location, price: form.price ? Number(form.price) : null,
+          land_size_cents: form.land_size_cents ? Number(form.land_size_cents) : null,
+          bhk: form.bhk ? Number(form.bhk) : null, owner_name: form.owner_name,
+          owner_phone: form.owner_phone, description: form.description,
+          images: allImages,
+        })
+        .eq("id", editProp.id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Property updated");
+      setEditProp(null);
+      qc.invalidateQueries({ queryKey: ["properties"] });
+    } catch (err) {
+      toast.error(err.message || "Failed to upload images");
+    } finally {
+      setSaving(false);
+    }
   }
 
   /* ── Delete ── */
@@ -239,15 +294,22 @@ export default function PropertiesPage() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Properties</h1>
           <p className="mt-1 text-sm text-muted-foreground">{properties.length} listings</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setAddImages([]); setAddImagePreviews([]); } }}>
           <DialogTrigger asChild>
             <Button className="shadow-[var(--shadow-glow)]">
               <Plus className="mr-1.5 h-4 w-4" /> Add property
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>New property listing</DialogTitle></DialogHeader>
-            <PropertyForm onSubmit={handleAdd} submitLabel="Save listing" />
+            <PropertyForm
+              onSubmit={handleAdd}
+              submitLabel="Save listing"
+              saving={saving}
+              images={addImages}
+              imagePreviews={addImagePreviews}
+              onImagesChange={(files, previews) => { setAddImages(files); setAddImagePreviews(previews); }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -382,9 +444,20 @@ export default function PropertiesPage() {
 
       {/* Edit dialog */}
       <Dialog open={!!editProp} onOpenChange={(v) => !v && setEditProp(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit property</DialogTitle></DialogHeader>
-          <PropertyForm form={form} onChange={setForm} onSubmit={handleEdit} submitLabel="Save changes" />
+          <PropertyForm
+            form={form}
+            onChange={setForm}
+            onSubmit={handleEdit}
+            submitLabel="Save changes"
+            saving={saving}
+            images={editImages}
+            imagePreviews={editImagePreviews}
+            existingImages={editExistingImages}
+            onImagesChange={(files, previews) => { setEditImages(files); setEditImagePreviews(previews); }}
+            onRemoveExistingImage={(url) => setEditExistingImages((prev) => prev.filter((u) => u !== url))}
+          />
         </DialogContent>
       </Dialog>
 
@@ -412,21 +485,166 @@ export default function PropertiesPage() {
   );
 }
 
+/* ─────────────── Image Uploader Component ─────────────── */
+function ImageUploader({ images, previews, existingImages = [], onImagesChange, onRemoveExisting }) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  function handleFiles(newFiles) {
+    const valid = Array.from(newFiles).filter((f) => f.type.startsWith("image/"));
+    if (valid.length === 0) return;
+    const combined = [...images, ...valid];
+    const newPreviews = [];
+    let loaded = 0;
+    valid.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        newPreviews.push(e.target.result);
+        loaded++;
+        if (loaded === valid.length) {
+          onImagesChange(combined, [...previews, ...newPreviews]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function removeNew(idx) {
+    const newFiles = images.filter((_, i) => i !== idx);
+    const newPreviews = previews.filter((_, i) => i !== idx);
+    onImagesChange(newFiles, newPreviews);
+  }
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFiles(e.dataTransfer.files);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images, previews]);
+
+  const totalImages = existingImages.length + previews.length;
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium">
+        Place Images <span className="text-muted-foreground font-normal">(optional)</span>
+      </label>
+
+      {/* Existing images (edit mode) */}
+      {existingImages.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {existingImages.map((url) => (
+            <div key={url} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="Property" className="h-full w-full object-cover" />
+              {onRemoveExisting && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveExisting(url)}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition group-hover:opacity-100"
+                >
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              )}
+              <div className="absolute bottom-0 left-0 right-0 bg-black/40 py-0.5 text-center text-[9px] text-white">Saved</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* New image previews */}
+      {previews.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {previews.map((src, i) => (
+            <div key={i} className="group relative h-20 w-20 overflow-hidden rounded-lg border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="Preview" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeNew(i)}
+                className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition group-hover:opacity-100"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+              <div className="absolute bottom-0 left-0 right-0 bg-primary/60 py-0.5 text-center text-[9px] text-white">New</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Drop zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 transition
+          ${dragging ? "border-primary bg-primary/5" : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50"}`}
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+          <ImagePlus className="h-5 w-5 text-primary" />
+        </div>
+        <div className="text-center">
+          <p className="text-xs font-medium">{dragging ? "Drop images here" : "Click or drag images"}</p>
+          <p className="text-[11px] text-muted-foreground">
+            JPG, PNG, WebP · up to 10 MB each{totalImages > 0 ? ` · ${totalImages} added` : ""}
+          </p>
+        </div>
+        <input ref={inputRef} type="file" accept="image/*" multiple className="sr-only"
+          onChange={(e) => handleFiles(e.target.files)} />
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────── Property Card (Listings tab) ─────────────── */
 function PropertyCard({ property: p, selected, onEdit, onDelete, onMatch }) {
   const gradient = TYPE_COLORS[p.property_type] || "from-muted to-muted/30";
+  const hasImages = p.images && p.images.length > 0;
+  const [imgIdx, setImgIdx] = useState(0);
+
   return (
     <div className={`group overflow-hidden rounded-xl border bg-card transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]
       ${selected ? "border-primary ring-1 ring-primary/30" : "border-border"}`}>
-      {/* Banner */}
-      <div className={`relative flex items-end bg-gradient-to-br ${gradient} px-4 pb-3 pt-8`}>
-        <div className="grid h-10 w-10 place-items-center rounded-lg bg-card/90 backdrop-blur shadow-sm">
-          <Home className="h-5 w-5 text-primary" />
+      {/* Banner / Images */}
+      {hasImages ? (
+        <div className="relative h-36 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={p.images[imgIdx]}
+            alt={p.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <span className="absolute right-2 top-2 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">
+            {p.status || "available"}
+          </span>
+          {p.images.length > 1 && (
+            <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1.5">
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); setImgIdx((i) => (i - 1 + p.images.length) % p.images.length); }}
+                className="rounded-full bg-black/50 p-0.5 text-white backdrop-blur hover:bg-black/70">
+                <ChevronLeft className="h-3 w-3" />
+              </button>
+              <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white backdrop-blur">{imgIdx + 1}/{p.images.length}</span>
+              <button type="button"
+                onClick={(e) => { e.stopPropagation(); setImgIdx((i) => (i + 1) % p.images.length); }}
+                className="rounded-full bg-black/50 p-0.5 text-white backdrop-blur hover:bg-black/70">
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
-        <span className="ml-auto rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur">
-          {p.status || "available"}
-        </span>
-      </div>
+      ) : (
+        <div className={`relative flex items-end bg-gradient-to-br ${gradient} px-4 pb-3 pt-8`}>
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-card/90 backdrop-blur shadow-sm">
+            <Home className="h-5 w-5 text-primary" />
+          </div>
+          <span className="ml-auto rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur">
+            {p.status || "available"}
+          </span>
+        </div>
+      )}
 
       <div className="p-4">
         <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{p.property_type}</div>
@@ -482,10 +700,15 @@ function PropertyPickerCard({ property: p, selected, onClick }) {
         ${selected ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"}`}
     >
       <div className="flex items-center gap-3">
-        <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xs font-bold
-          ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-          <Home className="h-4 w-4" />
-        </div>
+        {p.images && p.images.length > 0 ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.images[0]} alt={p.title} className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+        ) : (
+          <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xs font-bold
+            ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            <Home className="h-4 w-4" />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <div className="truncate text-sm font-medium">{p.title}</div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
@@ -624,7 +847,11 @@ function Chip({ label, value, icon: Icon, highlight }) {
 }
 
 /* ─────────────── Property Form ─────────────── */
-function PropertyForm({ form, onChange, onSubmit, submitLabel }) {
+function PropertyForm({
+  form, onChange, onSubmit, submitLabel, saving = false,
+  images = [], imagePreviews = [], existingImages = [],
+  onImagesChange, onRemoveExistingImage,
+}) {
   const controlled = !!onChange;
 
   function fi(name, label, props = {}) {
@@ -677,7 +904,24 @@ function PropertyForm({ form, onChange, onSubmit, submitLabel }) {
           <Textarea name="description" rows={2} />
         )}
       </div>
-      <DialogFooter><Button type="submit">{submitLabel}</Button></DialogFooter>
+
+      {/* Image uploader — optional */}
+      {onImagesChange && (
+        <ImageUploader
+          images={images}
+          previews={imagePreviews}
+          existingImages={existingImages}
+          onImagesChange={onImagesChange}
+          onRemoveExisting={onRemoveExistingImage}
+        />
+      )}
+
+      <DialogFooter>
+        <Button type="submit" disabled={saving} className="gap-2">
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saving ? "Uploading…" : submitLabel}
+        </Button>
+      </DialogFooter>
     </form>
   );
 }

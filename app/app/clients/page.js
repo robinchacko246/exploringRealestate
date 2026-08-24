@@ -15,12 +15,20 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Phone, MessageCircle, Mail, Filter, Pencil, Trash2, User, Hash } from "lucide-react";
+import { Plus, Search, Phone, MessageCircle, Mail, Filter, Pencil, Trash2, User, Hash, IndianRupee, MapPin, Home } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 
 const CATEGORIES = ["buyer", "seller", "rental", "investor"];
 const STATUSES = ["new", "active", "hot", "cold", "closed"];
+const PROPERTY_TYPES = ["plot", "villa", "apartment", "house", "commercial", "land"];
+
+function fmtINR(n) {
+  if (!n) return null;
+  if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} Cr`;
+  if (n >= 100000) return `₹${(n / 100000).toFixed(1)} L`;
+  return `₹${n.toLocaleString("en-IN")}`;
+}
 
 const STATUS_STYLES = {
   hot: "bg-red-500/15 text-red-600 dark:text-red-400",
@@ -81,7 +89,7 @@ export default function ClientsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("*")
+        .select("*, requirements(*)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -112,17 +120,40 @@ export default function ClientsPage() {
       status: fd.get("status") || "new",
       notes: String(fd.get("notes") || ""),
     };
-    const { error } = await supabase.from("clients").insert(payload);
+    const { data: newClient, error } = await supabase.from("clients").insert(payload).select().single();
     if (error) { toast.error(error.message); return; }
+
+    // Optionally save requirement if provided
+    const property_type = fd.get("property_type");
+    const budget_min = fd.get("budget_min") ? Number(fd.get("budget_min")) : null;
+    const budget_max = fd.get("budget_max") ? Number(fd.get("budget_max")) : null;
+    const location = String(fd.get("req_location") || "");
+    const bhk = fd.get("bhk") ? Number(fd.get("bhk")) : null;
+
+    if (property_type || budget_min || budget_max || location || bhk) {
+      await supabase.from("requirements").insert({
+        agent_id: user.id,
+        client_id: newClient.id,
+        property_type: property_type || "plot",
+        budget_min,
+        budget_max,
+        location,
+        bhk,
+        notes: payload.notes,
+      });
+    }
+
     toast.success("Client added");
     setAddOpen(false);
     e.target.reset();
     qc.invalidateQueries({ queryKey: ["clients"] });
+    qc.invalidateQueries({ queryKey: ["requirements-full"] });
   }
 
   /* ── Edit ── */
   function openEdit(c) {
     setEditClient(c);
+    const req = c.requirements?.[0] || {};
     setForm({
       name: c.name || "",
       phone: c.phone || "",
@@ -131,6 +162,12 @@ export default function ClientsPage() {
       category: c.category || "buyer",
       status: c.status || "new",
       notes: c.notes || "",
+      req_id: req.id || null,
+      property_type: req.property_type || "plot",
+      req_location: req.location || "",
+      budget_min: req.budget_min ?? "",
+      budget_max: req.budget_max ?? "",
+      bhk: req.bhk ?? "",
     });
   }
 
@@ -149,9 +186,29 @@ export default function ClientsPage() {
       })
       .eq("id", editClient.id);
     if (error) { toast.error(error.message); return; }
+
+    const reqPayload = {
+      property_type: form.property_type || "plot",
+      location: form.req_location || "",
+      budget_min: form.budget_min ? Number(form.budget_min) : null,
+      budget_max: form.budget_max ? Number(form.budget_max) : null,
+      bhk: form.bhk ? Number(form.bhk) : null,
+    };
+
+    if (form.req_id) {
+      await supabase.from("requirements").update(reqPayload).eq("id", form.req_id);
+    } else if (form.property_type || form.budget_min || form.budget_max || form.req_location || form.bhk) {
+      await supabase.from("requirements").insert({
+        agent_id: user.id,
+        client_id: editClient.id,
+        ...reqPayload,
+      });
+    }
+
     toast.success("Client updated");
     setEditClient(null);
     qc.invalidateQueries({ queryKey: ["clients"] });
+    qc.invalidateQueries({ queryKey: ["requirements-full"] });
   }
 
   /* ── Delete ── */
@@ -265,6 +322,8 @@ export default function ClientsPage() {
 
 /* ─────────────── Client Card ─────────────── */
 function ClientCard({ client: c, onEdit, onDelete }) {
+  const req = c.requirements?.[0];
+
   return (
     <div className="group flex flex-col rounded-xl border border-border bg-card transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
       {/* Top accent bar by status */}
@@ -301,6 +360,27 @@ function ClientCard({ client: c, onEdit, onDelete }) {
           )}
           {c.email && (
             <DetailRow icon={Mail} label="Email" value={c.email} href={`mailto:${c.email}`} />
+          )}
+          {req && (
+            <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs">
+              <div className="flex items-center justify-between font-medium text-primary">
+                <span className="capitalize flex items-center gap-1">
+                  <Home className="h-3 w-3" /> {req.property_type || "Any Type"}
+                </span>
+                {(req.budget_min || req.budget_max) && (
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                    <IndianRupee className="h-3 w-3" />
+                    {req.budget_min ? fmtINR(req.budget_min) : "0"} – {req.budget_max ? fmtINR(req.budget_max) : "∞"}
+                  </span>
+                )}
+              </div>
+              {req.location && (
+                <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <MapPin className="h-3 w-3 shrink-0" /> {req.location}
+                  {req.bhk && <span className="ml-1">· {req.bhk} BHK</span>}
+                </div>
+              )}
+            </div>
           )}
           {c.notes && (
             <div className="mt-2 rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground leading-relaxed">
@@ -408,17 +488,48 @@ function ClientForm({ defaultValues, onChange, onSubmit, submitLabel }) {
           )}
         </div>
       </div>
+
+      {/* Property Requirement & Budget Range Section */}
+      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-3">
+        <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+          <span>Property Requirement & Budget (for Matching)</span>
+          <span className="text-[10px] text-muted-foreground font-normal">Optional</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="mb-1 block text-xs font-medium">Property Type</Label>
+            {isControlled ? (
+              <Select value={defaultValues?.property_type || "plot"} onValueChange={(v) => onChange((p) => ({ ...p, property_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PROPERTY_TYPES.map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}</SelectContent>
+              </Select>
+            ) : (
+              <Select name="property_type" defaultValue="plot">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PROPERTY_TYPES.map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}</SelectContent>
+              </Select>
+            )}
+          </div>
+          {field("req_location", "Preferred Location", { placeholder: "Kakkanad, Kochi" })}
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          {field("budget_min", "Min Budget (₹)", { type: "number", placeholder: "3000000" })}
+          {field("budget_max", "Max Budget (₹)", { type: "number", placeholder: "6000000" })}
+          {field("bhk", "BHK (if house/apt)", { type: "number", placeholder: "3" })}
+        </div>
+      </div>
+
       <div>
         <Label className="mb-1 block text-xs font-medium">Notes</Label>
         {isControlled ? (
           <Textarea
-            rows={3}
+            rows={2}
             value={defaultValues?.notes ?? ""}
             onChange={(e) => onChange((p) => ({ ...p, notes: e.target.value }))}
             placeholder="Looking for 10 cent plot near Kakkanad…"
           />
         ) : (
-          <Textarea name="notes" rows={3} placeholder="Looking for 10 cent plot near Kakkanad…" />
+          <Textarea name="notes" rows={2} placeholder="Looking for 10 cent plot near Kakkanad…" />
         )}
       </div>
       <DialogFooter>
