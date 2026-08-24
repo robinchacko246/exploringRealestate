@@ -60,18 +60,18 @@ export default function LandingPage() {
         />
 
         <div className="mx-auto grid max-w-7xl gap-12 px-6 py-24 md:py-32 lg:grid-cols-[1.1fr_1fr] lg:items-center">
-          <div className="text-sidebar-foreground">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs backdrop-blur">
-              <span className="grid h-1.5 w-1.5 place-items-center rounded-full bg-primary" />
+          <div className="text-foreground">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary backdrop-blur">
+              <span className="grid h-2 w-2 place-items-center rounded-full bg-primary" />
               Built for Indian real estate agents
             </div>
-            <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">
+            <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl text-foreground">
               The WhatsApp CRM<br />
-              <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary via-emerald-600 to-teal-500 bg-clip-text text-transparent">
                 that remembers everything
               </span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-sidebar-foreground/70">
+            <p className="mt-6 max-w-xl text-base md:text-lg font-normal text-muted-foreground leading-relaxed">
               Every client. Every requirement. Every follow-up. PropertyFlow turns chaotic WhatsApp chats into a structured pipeline — with AI that matches buyers to your listings automatically.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
@@ -81,15 +81,15 @@ export default function LandingPage() {
                 </Button>
               </Link>
               <a href="#features">
-                <Button size="lg" variant="outline" className="h-12 border-white/20 bg-white/5 px-6 text-sidebar-foreground hover:bg-white/10 hover:text-sidebar-foreground">
+                <Button size="lg" variant="outline" className="h-12 border-border bg-background px-6 text-foreground hover:bg-accent hover:text-foreground">
                   See features
                 </Button>
               </a>
             </div>
-            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs text-sidebar-foreground/60">
-              <span className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-primary" /> 14-day free trial</span>
-              <span className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-primary" /> WhatsApp Business API</span>
-              <span className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-primary" /> AI requirement extraction</span>
+            <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-xs font-medium text-muted-foreground">
+              <span className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> 14-day free trial</span>
+              <span className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> WhatsApp Business API</span>
+              <span className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> AI requirement extraction</span>
             </div>
           </div>
 
@@ -239,11 +239,30 @@ export default function LandingPage() {
           <div className="text-xs font-semibold uppercase tracking-widest text-primary">Pricing</div>
           <h2 className="mt-2 font-display text-4xl font-bold tracking-tight">Simple plans. India-ready prices.</h2>
         </div>
-        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3">
+        <div className="mx-auto mt-12 grid max-w-5xl gap-6 md:grid-cols-3 text-left">
           {[
-            { n: "Starter", p: "₹0", s: "/mo", d: "For solo agents getting organized.", f: ["100 clients", "Manual chat logging", "Reminders", "Basic search"] },
-            { n: "Pro", p: "₹1,499", s: "/mo", d: "WhatsApp + AI for serious brokers.", f: ["Unlimited clients", "WhatsApp Business API", "AI requirement extraction", "Smart property matching", "Bulk broadcasts"], hi: true },
-            { n: "Agency", p: "₹4,999", s: "/mo", d: "Multi-agent teams & analytics.", f: ["Everything in Pro", "5 team members", "Lead analytics", "Admin dashboard", "API access"] },
+            {
+              n: "Starter Realtor",
+              p: "₹0",
+              s: "14-Day Trial",
+              d: "14-day free trial for agents starting out.",
+              f: ["14-Day Free Trial Access", "Up to 10 Clients", "Up to 10 Property Listings", "1 Image per Property", "Property Matching Engine"],
+            },
+            {
+              n: "Pro Realtor",
+              p: "₹499",
+              s: "/mo",
+              d: "For growing realtors needing higher limits & AI.",
+              f: ["Up to 50 Clients", "Up to 60 Property Listings", "Up to 2 Images per Property", "AI Requirement Matcher", "WhatsApp Direct Inbox", "Priority Support"],
+              hi: true,
+            },
+            {
+              n: "Agency Team",
+              p: "₹999",
+              s: "/mo",
+              d: "For agencies requiring unlimited capacity & team tools.",
+              f: ["Unlimited Clients & Listings", "Unlimited Image Uploads", "Multi-Agent Team Accounts", "Custom Branding & Receipts", "CSV Data Exports"],
+            },
           ].map((tier) => (
             <div key={tier.n} className={`relative rounded-2xl border bg-card p-8 ${tier.hi ? "border-primary shadow-[var(--shadow-glow)]" : "border-border"}`}>
               {tier.hi && (
@@ -277,14 +296,11 @@ export default function LandingPage() {
 
       {/* CTA */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
-        <div
-          className="overflow-hidden rounded-3xl px-10 py-16 text-center text-sidebar-foreground"
-          style={{ background: "var(--gradient-hero)" }}
-        >
-          <h2 className="font-display text-3xl font-bold tracking-tight md:text-4xl">
+        <div className="overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-background px-10 py-16 text-center text-foreground shadow-lg">
+          <h2 className="font-display text-3xl font-bold tracking-tight md:text-4xl text-foreground">
             Stop losing leads in WhatsApp chaos.
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sidebar-foreground/70">
+          <p className="mx-auto mt-3 max-w-xl text-muted-foreground text-sm md:text-base">
             Join thousands of Indian real estate agents who close faster with PropertyFlow.
           </p>
           <Link href="/auth">
