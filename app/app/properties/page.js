@@ -21,10 +21,13 @@ import {
   Plus, MapPin, Home, IndianRupee, Phone, User, Pencil, Trash2,
   Maximize2, BedDouble, Sparkles, MessageCircle, Mail, ChevronRight,
   CheckCircle2, XCircle, AlertCircle, SlidersHorizontal,
-  ImagePlus, X, ChevronLeft, Loader2,
+  ImagePlus, X, ChevronLeft, Loader2, Download, Printer, Share2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { usePlanLimits } from "@/hooks/use-plan-limits";
+import Link from "next/link";
+import { Crown, Zap } from "lucide-react";
 
 const PROPERTY_TYPES = ["plot", "villa", "apartment", "house", "commercial", "land"];
 
@@ -33,6 +36,36 @@ function fmtINR(n) {
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} Cr`;
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)} L`;
   return `₹${n.toLocaleString("en-IN")}`;
+}
+
+function exportPropertiesToCSV(props) {
+  if (!props || props.length === 0) {
+    toast.error("No properties to export");
+    return;
+  }
+  const headers = ["Title", "Type", "Location", "Price (INR)", "Land Size (cents)", "BHK", "Owner Name", "Owner Phone", "Description", "Images Count"];
+  const rows = props.map((p) => [
+    `"${(p.title || "").replace(/"/g, '""')}"`,
+    `"${p.property_type || ""}"`,
+    `"${(p.location || "").replace(/"/g, '""')}"`,
+    p.price ?? "",
+    p.land_size_cents ?? "",
+    p.bhk ?? "",
+    `"${(p.owner_name || "").replace(/"/g, '""')}"`,
+    `"${p.owner_phone || ""}"`,
+    `"${(p.description || "").replace(/"/g, '""')}"`,
+    p.images?.length || 0,
+  ].join(","));
+
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `properties_export_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast.success("Properties exported to CSV");
 }
 
 const TYPE_COLORS = {
@@ -139,7 +172,9 @@ function matchScore(property, requirement) {
 export default function PropertiesPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { plan, canAddProperty, maxAllowedImages } = usePlanLimits();
   const [addOpen, setAddOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [editProp, setEditProp] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState(EMPTY_PROP);
@@ -181,6 +216,14 @@ export default function PropertiesPage() {
   async function handleAdd(e) {
     e.preventDefault();
     if (!user) return;
+
+    const check = canAddProperty(properties.length);
+    if (!check.allowed) {
+      toast.error(check.reason);
+      setAddOpen(false);
+      setUpgradeOpen(true);
+      return;
+    }
     setSaving(true);
     try {
       const fd = new FormData(e.target);
@@ -294,22 +337,70 @@ export default function PropertiesPage() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Properties</h1>
           <p className="mt-1 text-sm text-muted-foreground">{properties.length} listings</p>
         </div>
-        <Dialog open={addOpen} onOpenChange={(v) => { setAddOpen(v); if (!v) { setAddImages([]); setAddImagePreviews([]); } }}>
-          <DialogTrigger asChild>
-            <Button className="shadow-[var(--shadow-glow)]">
-              <Plus className="mr-1.5 h-4 w-4" /> Add property
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>New property listing</DialogTitle></DialogHeader>
-            <PropertyForm
-              onSubmit={handleAdd}
-              submitLabel="Save listing"
-              saving={saving}
-              images={addImages}
-              imagePreviews={addImagePreviews}
-              onImagesChange={(files, previews) => { setAddImages(files); setAddImagePreviews(previews); }}
-            />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportPropertiesToCSV(properties)} className="gap-1.5 text-xs">
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Dialog open={addOpen} onOpenChange={(v) => {
+            if (v) {
+              const check = canAddProperty(properties.length);
+              if (!check.allowed) {
+                toast.error(check.reason);
+                setUpgradeOpen(true);
+                return;
+              }
+            }
+            setAddOpen(v);
+            if (!v) { setAddImages([]); setAddImagePreviews([]); }
+          }}>
+            <DialogTrigger asChild>
+              <Button className="shadow-[var(--shadow-glow)]">
+                <Plus className="mr-1.5 h-4 w-4" /> Add property
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>New property listing</DialogTitle></DialogHeader>
+              <PropertyForm
+                onSubmit={handleAdd}
+                submitLabel="Save listing"
+                saving={saving}
+                images={addImages}
+                imagePreviews={addImagePreviews}
+                onImagesChange={(files, previews) => { setAddImages(files); setAddImagePreviews(previews); }}
+                maxImages={maxAllowedImages()}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Upgrade Plan Modal */}
+        <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+          <DialogContent className="max-w-md text-center p-6">
+            <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+              <Crown className="h-6 w-6" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-center">Upgrade Your Plan</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground mt-2">
+              You have reached the <strong>{plan.maxProperties} property limit</strong> on your <strong>{plan.name}</strong>. Upgrade to list more properties!
+            </p>
+            <div className="my-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-left space-y-2">
+              <div className="font-semibold text-xs text-primary flex items-center gap-1.5">
+                <Zap className="h-4 w-4" /> Upgrade Options
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-1.5 pl-4 list-disc">
+                <li><strong>Pro Realtor (₹499/mo)</strong>: Up to 60 Properties & 50 Clients (2 images/prop)</li>
+                <li><strong>Agency Team (₹999/mo)</strong>: Unlimited Properties, Clients & Images</li>
+              </ul>
+            </div>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button asChild className="w-full gap-2">
+                <Link href="/app/billing">
+                  <Crown className="h-4 w-4" /> View Billing & Upgrade
+                </Link>
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -457,6 +548,7 @@ export default function PropertiesPage() {
             existingImages={editExistingImages}
             onImagesChange={(files, previews) => { setEditImages(files); setEditImagePreviews(previews); }}
             onRemoveExistingImage={(url) => setEditExistingImages((prev) => prev.filter((u) => u !== url))}
+            maxImages={maxAllowedImages()}
           />
         </DialogContent>
       </Dialog>
@@ -486,22 +578,31 @@ export default function PropertiesPage() {
 }
 
 /* ─────────────── Image Uploader Component ─────────────── */
-function ImageUploader({ images, previews, existingImages = [], onImagesChange, onRemoveExisting }) {
+function ImageUploader({ images, previews, existingImages = [], onImagesChange, onRemoveExisting, maxImages = Infinity }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
   function handleFiles(newFiles) {
     const valid = Array.from(newFiles).filter((f) => f.type.startsWith("image/"));
     if (valid.length === 0) return;
-    const combined = [...images, ...valid];
+
+    const currentTotal = existingImages.length + previews.length;
+    if (currentTotal + valid.length > maxImages) {
+      toast.error(`Your plan allows up to ${maxImages} image${maxImages > 1 ? "s" : ""} per property. Upgrade plan to upload more.`);
+    }
+
+    const allowedFiles = valid.slice(0, Math.max(0, maxImages - currentTotal));
+    if (allowedFiles.length === 0) return;
+
+    const combined = [...images, ...allowedFiles];
     const newPreviews = [];
     let loaded = 0;
-    valid.forEach((file) => {
+    allowedFiles.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         newPreviews.push(e.target.result);
         loaded++;
-        if (loaded === valid.length) {
+        if (loaded === allowedFiles.length) {
           onImagesChange(combined, [...previews, ...newPreviews]);
         }
       };
@@ -677,11 +778,59 @@ function PropertyCard({ property: p, selected, onEdit, onDelete, onMatch }) {
           <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-primary hover:text-primary" onClick={onMatch}>
             <Sparkles className="h-3 w-3" /> Match clients
           </Button>
-          <div className="flex gap-1">
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={onEdit}>
+          <div className="flex items-center gap-1">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" title="Print / Share Property Flyer">
+                  <Printer className="h-3.5 w-3.5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" /> Property Flyer & Receipt
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="rounded-xl border border-border p-5 bg-card space-y-4 text-left">
+                  {p.images && p.images.length > 0 && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.images[0]} alt={p.title} className="h-44 w-full object-cover rounded-lg" />
+                  )}
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary">{p.property_type}</span>
+                    <h3 className="text-lg font-bold">{p.title}</h3>
+                    <p className="text-xs text-muted-foreground">{p.location}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg bg-muted p-2">
+                      <span className="text-[10px] text-muted-foreground block">Price</span>
+                      <span className="font-bold text-primary">{fmtINR(p.price)}</span>
+                    </div>
+                    <div className="rounded-lg bg-muted p-2">
+                      <span className="text-[10px] text-muted-foreground block">Size / BHK</span>
+                      <span className="font-bold">{p.land_size_cents ? `${p.land_size_cents} cents` : p.bhk ? `${p.bhk} BHK` : "—"}</span>
+                    </div>
+                  </div>
+                  {p.description && (
+                    <p className="text-xs text-muted-foreground italic border-t border-border pt-2">{p.description}</p>
+                  )}
+                  <div className="border-t border-border pt-3 text-[11px] text-muted-foreground flex justify-between">
+                    <span>Listed by Realtor CRM</span>
+                    <span>Contact: {p.owner_phone || "Agent"}</span>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => window.print()} className="gap-1.5 text-xs">
+                    <Printer className="h-3.5 w-3.5" /> Print / Save PDF
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={onEdit} title="Edit listing">
               <Pencil className="h-3.5 w-3.5" />
             </Button>
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete}>
+            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete} title="Delete listing">
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -850,7 +999,7 @@ function Chip({ label, value, icon: Icon, highlight }) {
 function PropertyForm({
   form, onChange, onSubmit, submitLabel, saving = false,
   images = [], imagePreviews = [], existingImages = [],
-  onImagesChange, onRemoveExistingImage,
+  onImagesChange, onRemoveExistingImage, maxImages,
 }) {
   const controlled = !!onChange;
 
@@ -913,6 +1062,7 @@ function PropertyForm({
           existingImages={existingImages}
           onImagesChange={onImagesChange}
           onRemoveExisting={onRemoveExistingImage}
+          maxImages={maxImages}
         />
       )}
 

@@ -15,9 +15,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Phone, MessageCircle, Mail, Filter, Pencil, Trash2, User, Hash, IndianRupee, MapPin, Home } from "lucide-react";
+import { Plus, Search, Phone, MessageCircle, Mail, Filter, Pencil, Trash2, User, Hash, IndianRupee, MapPin, Home, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { usePlanLimits } from "@/hooks/use-plan-limits";
+import Link from "next/link";
+import { Zap, Crown } from "lucide-react";
 
 const CATEGORIES = ["buyer", "seller", "rental", "investor"];
 const STATUSES = ["new", "active", "hot", "cold", "closed"];
@@ -28,6 +31,40 @@ function fmtINR(n) {
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} Cr`;
   if (n >= 100000) return `₹${(n / 100000).toFixed(1)} L`;
   return `₹${n.toLocaleString("en-IN")}`;
+}
+
+function exportClientsToCSV(clients) {
+  if (!clients || clients.length === 0) {
+    toast.error("No clients to export");
+    return;
+  }
+  const headers = ["Name", "Category", "Status", "Phone", "WhatsApp", "Email", "Property Type", "Min Budget (INR)", "Max Budget (INR)", "Location", "Notes"];
+  const rows = clients.map((c) => {
+    const req = c.requirements?.[0] || {};
+    return [
+      `"${(c.name || "").replace(/"/g, '""')}"`,
+      `"${c.category || ""}"`,
+      `"${c.status || ""}"`,
+      `"${c.phone || ""}"`,
+      `"${c.whatsapp || ""}"`,
+      `"${c.email || ""}"`,
+      `"${req.property_type || ""}"`,
+      req.budget_min ?? "",
+      req.budget_max ?? "",
+      `"${(req.location || "").replace(/"/g, '""')}"`,
+      `"${(c.notes || "").replace(/"/g, '""')}"`,
+    ].join(",");
+  });
+
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `clients_export_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast.success("Clients exported to CSV");
 }
 
 const STATUS_STYLES = {
@@ -77,9 +114,11 @@ const EMPTY = { name: "", phone: "", whatsapp: "", email: "", category: "buyer",
 export default function ClientsPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { plan, canAddClient } = usePlanLimits();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [editClient, setEditClient] = useState(null);  // client object to edit
   const [deleteId, setDeleteId] = useState(null);       // id to delete
   const [form, setForm] = useState(EMPTY);
@@ -109,6 +148,14 @@ export default function ClientsPage() {
   async function handleAdd(e) {
     e.preventDefault();
     if (!user) return;
+
+    const check = canAddClient(clients.length);
+    if (!check.allowed) {
+      toast.error(check.reason);
+      setAddOpen(false);
+      setUpgradeOpen(true);
+      return;
+    }
     const fd = new FormData(e.target);
     const payload = {
       agent_id: user.id,
@@ -230,15 +277,62 @@ export default function ClientsPage() {
             {clients.length} total · {filtered.length} shown
           </p>
         </div>
-        <Dialog open={addOpen} onOpenChange={setAddOpen}>
-          <DialogTrigger asChild>
-            <Button className="shadow-[var(--shadow-glow)]">
-              <Plus className="mr-1.5 h-4 w-4" /> Add client
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>New client</DialogTitle></DialogHeader>
-            <ClientForm onSubmit={handleAdd} submitLabel="Save client" />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportClientsToCSV(filtered)} className="gap-1.5 text-xs">
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
+          <Dialog open={addOpen} onOpenChange={(v) => {
+            if (v) {
+              const check = canAddClient(clients.length);
+              if (!check.allowed) {
+                toast.error(check.reason);
+                setUpgradeOpen(true);
+                return;
+              }
+            }
+            setAddOpen(v);
+          }}>
+            <DialogTrigger asChild>
+              <Button className="shadow-[var(--shadow-glow)]">
+                <Plus className="mr-1.5 h-4 w-4" /> Add client
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader><DialogTitle>New client</DialogTitle></DialogHeader>
+              <ClientForm onSubmit={handleAdd} submitLabel="Save client" />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Upgrade Plan Modal */}
+        <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+          <DialogContent className="max-w-md text-center p-6">
+            <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-primary/10 text-primary">
+              <Crown className="h-6 w-6" />
+            </div>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-center">Upgrade Your Plan</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground mt-2">
+              You have reached the <strong>{plan.maxClients} client limit</strong> on your <strong>{plan.name}</strong>. Upgrade to add more clients and unlock premium realtor tools!
+            </p>
+            <div className="my-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-left space-y-2">
+              <div className="font-semibold text-xs text-primary flex items-center gap-1.5">
+                <Zap className="h-4 w-4" /> Pro Realtor (₹499/mo)
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-1 pl-4 list-disc">
+                <li>Up to 50 Clients & 60 Properties</li>
+                <li>Up to 2 Images per Property</li>
+                <li>AI Requirement Matcher & WhatsApp Inbox</li>
+              </ul>
+            </div>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button asChild className="w-full gap-2">
+                <Link href="/app/billing">
+                  <Crown className="h-4 w-4" /> View Billing & Upgrade
+                </Link>
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
