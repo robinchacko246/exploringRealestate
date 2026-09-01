@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Building2, Flame, CalendarClock, ArrowUpRight, TrendingUp } from "lucide-react";
+import { Users, Building2, Flame, CalendarClock, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
 function StatCard({ icon: Icon, label, value, hint, accent }) {
@@ -147,24 +147,6 @@ export default function Dashboard() {
           ) : (
             <EmptyState icon={CalendarClock} title="All clear" hint="No follow-ups due today." />
           )}
-        </div>
-      </div>
-
-      {/* AI nudge */}
-      <div className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-accent to-card p-6">
-        <div className="flex items-start gap-4">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground">
-            <TrendingUp className="h-5 w-5" />
-          </div>
-          <div className="flex-1">
-            <div className="text-xs font-semibold uppercase tracking-widest text-primary">AI Insight</div>
-            <h3 className="mt-1 font-display text-lg font-semibold">
-              Connect WhatsApp to unlock AI matching
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Sync your WhatsApp Business chats so PropertyFlow can auto-extract requirements and match them to your listings.
-            </p>
-          </div>
         </div>
       </div>
     </div>

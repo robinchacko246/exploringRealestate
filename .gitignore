@@ -17,8 +17,10 @@ dist-ssr
 # Environment variables
 .env
 .env.*
+.next
 !.env.example
 *.local
+.next/*
 
 # Wrangler / Cloudflare
 .wrangler/

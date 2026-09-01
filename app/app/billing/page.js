@@ -19,7 +19,7 @@ const PLANS = [
   {
     ...PLAN_CONFIGS.free,
     recommended: false,
-    buttonText: "Current Plan",
+    buttonText: "Downgrade to Free",
   },
   {
     ...PLAN_CONFIGS.pro_realtor,
@@ -58,11 +58,15 @@ export default function BillingPage() {
     },
   });
 
-  const activeSub = subscriptions.find((s) => s.status === "active") || {
-    plan_id: "free",
-    plan_name: "Starter Realtor",
-    created_at: new Date().toISOString(),
-  };
+  // Prefer the paid plan if multiple active subscriptions exist (e.g. free + pro)
+  const activeSubscriptions = subscriptions.filter((s) => s.status === "active");
+  const activeSub =
+    activeSubscriptions.find((s) => s.plan_id !== "free") ||
+    activeSubscriptions.find((s) => s.plan_id === "free") || {
+      plan_id: "free",
+      plan_name: "Starter Realtor",
+      created_at: new Date().toISOString(),
+    };
 
   async function handleSubscribe(plan) {
     if (plan.price === 0) return;
