@@ -47,6 +47,13 @@ export default function ListingsLayout({ children }) {
                 {label}
               </Link>
             ))}
+            {/* Sell / Rent — visually distinct */}
+            <Link
+              href="/sell"
+              className="ml-1 px-4 py-2 text-[14px] font-semibold text-[#E65100] hover:text-white hover:bg-[#E65100] rounded transition-colors border border-[#E65100]"
+            >
+              Sell / Rent
+            </Link>
           </nav>
 
           {/* Right actions */}

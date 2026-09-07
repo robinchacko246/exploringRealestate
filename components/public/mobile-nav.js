@@ -41,6 +41,14 @@ export default function MobileNav() {
                 {label}
               </Link>
             ))}
+            {/* Sell / Rent — distinct orange */}
+            <Link
+              href="/sell"
+              onClick={() => setOpen(false)}
+              className="text-[15px] font-semibold text-[#E65100] py-3 border-b border-[#F0F0F0] flex items-center gap-2"
+            >
+              🏷 Sell / Rent My Property
+            </Link>
             <Link
               href="/auth"
               onClick={() => setOpen(false)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
@@ -93,9 +93,16 @@ function PropertyCard({ property, onClick }) {
             📷 {property.images.length}
           </div>
         )}
-        {/* Status */}
-        <div className="absolute top-3 right-3 bg-[#009688] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase">
-          {property.status}
+        {/* Status + owner badge */}
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+          <div className="bg-[#009688] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase">
+            {property.status}
+          </div>
+          {property._source === "owner" && (
+            <div className="bg-[#E65100] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide">
+              Owner Listed
+            </div>
+          )}
         </div>
       </div>
 
@@ -318,8 +325,8 @@ function SkeletonCard() {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-export default function ListingsPage() {
+// ── Main Page Content ─────────────────────────────────────────────────────────
+function ListingsContent() {
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type");
   const validTypes = CATEGORIES.map((c) => c.id);
@@ -333,22 +340,43 @@ export default function ListingsPage() {
   const [priceRange,       setPriceRange]        = useState("all");
   const [sortBy,           setSortBy]            = useState("newest");
   // Hero search form state
-  const [heroType,         setHeroType]          = useState("");
+  const [heroType,         setHeroType]          = useState(initialCategory === "all" ? "" : initialCategory);
   const [heroLocation,     setHeroLocation]      = useState("");
-  const [activeTab,        setActiveTab]         = useState("buy");
+  const [activeTab,        setActiveTab]         = useState("all"); // 'all' | 'buy' | 'rent'
 
   const gridRef = useRef(null);
 
   useEffect(() => {
     async function fetchProps() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("status", "available")
-        .order("created_at", { ascending: false });
-      if (error) console.error(error);
-      else setProperties(data || []);
+
+      // Fetch from both: agent-managed properties + owner-submitted listings
+      const [agentRes, ownerRes] = await Promise.all([
+        supabase
+          .from("properties")
+          .select("*")
+          .eq("status", "available")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("public_property_listings")
+          .select("*")
+          .eq("status", "available")
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (agentRes.error) console.error("Agent properties error:", agentRes.error);
+      if (ownerRes.error) console.error("Owner listings error:", ownerRes.error);
+
+      // Tag each source so we can show a badge
+      const agentProps = (agentRes.data || []).map((p) => ({ ...p, _source: "agent" }));
+      const ownerProps = (ownerRes.data || []).map((p) => ({ ...p, _source: "owner" }));
+
+      // Merge and sort by newest first
+      const all = [...agentProps, ...ownerProps].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      setProperties(all);
       setLoading(false);
     }
     fetchProps();
@@ -356,36 +384,73 @@ export default function ListingsPage() {
 
   const filtered = useMemo(() => {
     let list = [...properties];
-    if (activeCategory !== "all") list = list.filter((p) => p.property_type === activeCategory);
+
+    // Filter by Tab (Buy / Rent)
+    if (activeTab === "rent") {
+      list = list.filter((p) => p.listing_type === "rent" || p.listing_type === "rent_out");
+    } else if (activeTab === "buy") {
+      list = list.filter((p) => p.listing_type === "sell" || p.listing_type === "sale" || !p.listing_type);
+    }
+
+    // Filter by Category / Type
+    if (activeCategory !== "all") {
+      list = list.filter((p) => p.property_type === activeCategory);
+    }
+
+    // Filter by Search (Location / Title / Description)
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((p) =>
         p.title?.toLowerCase().includes(q) ||
         p.location?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
+        p.description?.toLowerCase().includes(q) ||
+        p.owner_name?.toLowerCase().includes(q)
       );
     }
+
+    // Filter by Price Range
     if (priceRange !== "all") {
-      const ranges = { "0-50L":[0,5e6],"50L-1Cr":[5e6,1e7],"1Cr-5Cr":[1e7,5e7],"5Cr+":[5e7,Infinity] };
-      const [mn,mx] = ranges[priceRange] || [0,Infinity];
-      list = list.filter((p) => (p.price||0) >= mn && (p.price||0) < mx);
+      const ranges = {
+        "0-50L":   [0, 5000000],
+        "50L-1Cr": [5000000, 10000000],
+        "1Cr-5Cr": [10000000, 50000000],
+        "5Cr+":   [50000000, Infinity],
+      };
+      const [mn, mx] = ranges[priceRange] || [0, Infinity];
+      list = list.filter((p) => (p.price || 0) >= mn && (p.price || 0) < mx);
     }
-    if (sortBy === "newest")     list.sort((a,b) => new Date(b.created_at)-new Date(a.created_at));
-    else if (sortBy==="price-asc")  list.sort((a,b) => (a.price||0)-(b.price||0));
-    else if (sortBy==="price-desc") list.sort((a,b) => (b.price||0)-(a.price||0));
+
+    // Sort
+    if (sortBy === "newest")        list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    else if (sortBy === "price-asc")  list.sort((a, b) => (a.price || 0) - (b.price || 0));
+    else if (sortBy === "price-desc") list.sort((a, b) => (b.price || 0) - (a.price || 0));
+
     return list;
-  }, [properties, activeCategory, search, priceRange, sortBy]);
+  }, [properties, activeTab, activeCategory, search, priceRange, sortBy]);
 
   const counts = useMemo(() => {
-    const m = { all: properties.length };
-    CATEGORIES.slice(1).forEach((c) => { m[c.id] = properties.filter((p) => p.property_type === c.id).length; });
+    let list = [...properties];
+    if (activeTab === "rent") {
+      list = list.filter((p) => p.listing_type === "rent" || p.listing_type === "rent_out");
+    } else if (activeTab === "buy") {
+      list = list.filter((p) => p.listing_type === "sell" || p.listing_type === "sale" || !p.listing_type);
+    }
+    const m = { all: list.length };
+    CATEGORIES.slice(1).forEach((c) => {
+      m[c.id] = list.filter((p) => p.property_type === c.id).length;
+    });
     return m;
-  }, [properties]);
+  }, [properties, activeTab]);
 
   const handleHeroSearch = () => {
-    if (heroType) setActiveCategory(heroType);
-    if (heroLocation) setSearch(heroLocation);
+    setActiveCategory(heroType || "all");
+    setSearch(heroLocation);
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleCategorySelect = (catId) => {
+    setActiveCategory(catId);
+    setHeroType(catId === "all" ? "" : catId);
   };
 
   const handleCardClick  = useCallback((p) => { setSelectedProperty(p); document.body.style.overflow = "hidden"; }, []);
@@ -423,7 +488,7 @@ export default function ListingsPage() {
                 Welcome to PropertyFlow — Kerala&apos;s trusted real estate platform. Browse thousands of plots, villas, apartments, and commercial spaces listed by verified agents.
               </p>
               {/* Stats */}
-              <div className="flex flex-wrap gap-6">
+              <div className="flex flex-wrap gap-6 mb-6">
                 {[
                   [properties.length || "100+", "Properties"],
                   ["50+", "Verified Agents"],
@@ -435,6 +500,17 @@ export default function ListingsPage() {
                   </div>
                 ))}
               </div>
+
+              {/* Owner CTA pill */}
+              <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur border border-white/20 rounded-xl px-4 py-3">
+                <span className="text-[13px] text-white/90 font-medium">Are you a Property Owner?</span>
+                <a
+                  href="/sell"
+                  className="bg-[#E65100] hover:bg-[#BF360C] text-white text-[12.5px] font-bold px-3.5 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  Post Free Listing →
+                </a>
+              </div>
             </div>
 
             {/* Right: search panel */}
@@ -442,6 +518,7 @@ export default function ListingsPage() {
               {/* Tab switcher */}
               <div className="flex border-b border-[#EEEEEE]">
                 {[
+                  { id: "all",  label: "All" },
                   { id: "buy",  label: "Buy" },
                   { id: "rent", label: "Rent" },
                 ].map((tab) => (
@@ -467,7 +544,11 @@ export default function ListingsPage() {
                   </label>
                   <select
                     value={heroType}
-                    onChange={(e) => setHeroType(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setHeroType(val);
+                      setActiveCategory(val || "all");
+                    }}
                     className="w-full border border-[#E0E0E0] rounded-lg px-3.5 py-2.5 text-[14px] text-[#212121] bg-white focus:outline-none focus:border-[#009688] transition-colors"
                   >
                     <option value="">All Types</option>
@@ -489,7 +570,10 @@ export default function ListingsPage() {
                     <input
                       type="text"
                       value={heroLocation}
-                      onChange={(e) => setHeroLocation(e.target.value)}
+                      onChange={(e) => {
+                        setHeroLocation(e.target.value);
+                        setSearch(e.target.value);
+                      }}
                       placeholder="e.g. Kakkanad, Ernakulam…"
                       className="w-full border border-[#E0E0E0] rounded-lg pl-9 pr-3.5 py-2.5 text-[14px] text-[#212121] placeholder-[#BDBDBD] focus:outline-none focus:border-[#009688] transition-colors"
                     />
@@ -538,7 +622,7 @@ export default function ListingsPage() {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => handleCategorySelect(cat.id)}
                 className="shrink-0 px-5 py-4 text-[13.5px] font-medium border-b-2 transition-all whitespace-nowrap"
                 style={{
                   borderBottomColor: activeCategory === cat.id ? "#009688" : "transparent",
@@ -558,7 +642,7 @@ export default function ListingsPage() {
       {/* ── Listings ──────────────────────────────────────────────────── */}
       <div className="max-w-[1280px] mx-auto px-4 md:px-8 py-8">
         {/* Filter bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="text-[18px] font-bold text-[#212121]">
               {activeCategory === "all" ? "All Properties" : CATEGORIES.find(c=>c.id===activeCategory)?.label}
@@ -568,12 +652,6 @@ export default function ListingsPage() {
                 </span>
               )}
             </h2>
-            {search && (
-              <p className="text-[13px] text-[#757575] mt-0.5">
-                Search: &ldquo;{search}&rdquo;&nbsp;
-                <button onClick={() => setSearch("")} className="text-[#009688] underline hover:text-[#00796B]">Clear</button>
-              </p>
-            )}
           </div>
 
           <div className="flex items-center gap-4 text-[13.5px] text-[#616161]">
@@ -585,13 +663,24 @@ export default function ListingsPage() {
               </svg>
               <input
                 type="text"
-                placeholder="Search…"
+                placeholder="Search location or keyword…"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="px-2.5 py-2 text-[13px] text-[#212121] outline-none bg-transparent w-36"
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setHeroLocation(e.target.value);
+                }}
+                className="px-2.5 py-2 text-[13px] text-[#212121] outline-none bg-transparent w-48"
               />
               {search && (
-                <button onClick={() => setSearch("")} className="pr-2 text-[#BDBDBD] hover:text-[#212121]">×</button>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setHeroLocation("");
+                  }}
+                  className="pr-2 text-[#BDBDBD] hover:text-[#212121]"
+                >
+                  ×
+                </button>
               )}
             </div>
 
@@ -606,6 +695,51 @@ export default function ListingsPage() {
             </select>
           </div>
         </div>
+
+        {/* Active Filter Badges */}
+        {(activeTab !== "all" || activeCategory !== "all" || search || priceRange !== "all") && (
+          <div className="flex flex-wrap items-center gap-2 mb-6 text-[12.5px]">
+            <span className="text-[#9E9E9E] font-medium mr-1">Active Filters:</span>
+            {activeTab !== "all" && (
+              <span className="inline-flex items-center gap-1.5 bg-[#E0F2F1] text-[#00796B] px-3 py-1 rounded-full font-medium">
+                Type: {activeTab === "buy" ? "For Sale" : "For Rent"}
+                <button onClick={() => setActiveTab("all")} className="hover:text-[#004D40] font-bold">✕</button>
+              </span>
+            )}
+            {activeCategory !== "all" && (
+              <span className="inline-flex items-center gap-1.5 bg-[#E0F2F1] text-[#00796B] px-3 py-1 rounded-full font-medium">
+                Category: {CATEGORIES.find(c=>c.id===activeCategory)?.label}
+                <button onClick={() => handleCategorySelect("all")} className="hover:text-[#004D40] font-bold">✕</button>
+              </span>
+            )}
+            {search && (
+              <span className="inline-flex items-center gap-1.5 bg-[#E0F2F1] text-[#00796B] px-3 py-1 rounded-full font-medium">
+                Keyword: &ldquo;{search}&rdquo;
+                <button onClick={() => { setSearch(""); setHeroLocation(""); }} className="hover:text-[#004D40] font-bold">✕</button>
+              </span>
+            )}
+            {priceRange !== "all" && (
+              <span className="inline-flex items-center gap-1.5 bg-[#E0F2F1] text-[#00796B] px-3 py-1 rounded-full font-medium">
+                Budget: {priceRange}
+                <button onClick={() => setPriceRange("all")} className="hover:text-[#004D40] font-bold">✕</button>
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setActiveTab("all");
+                setActiveCategory("all");
+                setHeroType("");
+                setSearch("");
+                setHeroLocation("");
+                setPriceRange("all");
+                setSortBy("newest");
+              }}
+              className="text-[#009688] hover:underline font-semibold ml-2 text-[12px]"
+            >
+              Reset All
+            </button>
+          </div>
+        )}
 
         {/* Grid */}
         {loading ? (
@@ -623,7 +757,15 @@ export default function ListingsPage() {
             <p className="text-[20px] font-semibold text-[#424242] mb-2">No properties found</p>
             <p className="text-[14px] text-[#9E9E9E] mb-6">Try adjusting your filters or search terms.</p>
             <button
-              onClick={() => { setSearch(""); setActiveCategory("all"); setPriceRange("all"); setSortBy("newest"); }}
+              onClick={() => {
+                setActiveTab("all");
+                setActiveCategory("all");
+                setHeroType("");
+                setSearch("");
+                setHeroLocation("");
+                setPriceRange("all");
+                setSortBy("newest");
+              }}
               className="bg-[#009688] text-white px-6 py-2.5 rounded-lg font-semibold text-[14px] hover:bg-[#00796B] transition-colors"
             >
               Clear All Filters
@@ -680,5 +822,20 @@ export default function ListingsPage() {
         <PropertyModal property={selectedProperty} onClose={handleModalClose} />
       )}
     </>
+  );
+}
+
+export default function ListingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-[1280px] mx-auto px-4 py-24 text-center">
+          <div className="w-12 h-12 border-4 border-[#009688] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[15px] font-medium text-[#616161]">Loading listings...</p>
+        </div>
+      }
+    >
+      <ListingsContent />
+    </Suspense>
   );
 }
