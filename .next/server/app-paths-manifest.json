@@ -1,6 +1,8 @@
 {
+  "/auth/page": "app/auth/page.js",
   "/page": "app/page.js",
+  "/listings/page": "app/listings/page.js",
   "/app/page": "app/app/page.js",
-  "/app/billing/page": "app/app/billing/page.js",
-  "/app/clients/page": "app/app/clients/page.js"
+  "/agentscrm/page": "app/agentscrm/page.js",
+  "/app/properties/page": "app/app/properties/page.js"
 }

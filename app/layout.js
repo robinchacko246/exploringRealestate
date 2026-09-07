@@ -1,6 +1,14 @@
+import { DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
+
+const dmSerif = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display-serif",
+  display: "swap",
+});
 
 export const metadata = {
   title: "PropertyFlow CRM — WhatsApp CRM for Real Estate Agents",
@@ -29,7 +37,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
+      <body className={dmSerif.variable}>
         <Providers>
           {children}
           <Toaster position="top-right" richColors />

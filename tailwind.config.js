@@ -13,6 +13,7 @@ module.exports = {
       fontFamily: {
         sans: ["DM Sans", "ui-sans-serif", "system-ui", "sans-serif"],
         display: ["Space Grotesk", "ui-sans-serif", "system-ui", "sans-serif"],
+        serif: ["var(--font-display-serif)", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -61,6 +62,14 @@ module.exports = {
         },
         border: "var(--border)",
         input: "var(--input)",
+        // Public website design tokens
+        ink: "#1C1914",
+        paper: "#F5F1EA",
+        chalk: "#6B6257",
+        dust: "#9B9087",
+        hairline: "#D8D1C7",
+        rust: "#B85432",
+        "rust-dark": "#8E3A1E",
         ring: "var(--ring)",
         "chat-incoming": "var(--chat-incoming)",
         "chat-outgoing": "var(--chat-outgoing)",

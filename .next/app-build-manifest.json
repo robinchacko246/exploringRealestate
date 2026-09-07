@@ -1,9 +1,14 @@
 {
   "pages": {
-    "/page": [
+    "/listings/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/chunks/app/listings/page.js"
+    ],
+    "/listings/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/listings/layout.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -21,6 +26,16 @@
       "static/chunks/main-app.js",
       "static/chunks/app/not-found.js"
     ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
     "/auth/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -36,15 +51,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/app/layout.js"
     ],
-    "/app/billing/page": [
+    "/agentscrm/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/app/billing/page.js"
+      "static/chunks/app/agentscrm/page.js"
     ],
     "/app/clients/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/app/clients/page.js"
+    ],
+    "/app/properties/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/app/properties/page.js"
+    ],
+    "/agentscrm/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/agentscrm/layout.js"
     ]
   }
 }
