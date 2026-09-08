@@ -96,6 +96,7 @@ export default function SellPage() {
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [error, setError]             = useState("");
+  const [files, setFiles]             = useState([]);
 
   const [form, setForm] = useState({
     property_type:   "apartment",
@@ -110,6 +111,10 @@ export default function SellPage() {
   });
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+  const removeFile = (idx) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleStep1 = (e) => {
     e.preventDefault();
@@ -128,6 +133,30 @@ export default function SellPage() {
 
     setSubmitting(true);
 
+    const imageUrls = [];
+    if (files.length > 0) {
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `public-listings/${fileName}`;
+        
+        const { error: uploadError, data } = await supabase.storage
+          .from("property-images")
+          .upload(filePath, file);
+          
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+        }
+        
+        if (data) {
+          const { data: pubData } = supabase.storage.from("property-images").getPublicUrl(filePath);
+          if (pubData) {
+            imageUrls.push(pubData.publicUrl);
+          }
+        }
+      }
+    }
+
     const payload = {
       listing_type:    listingType,
       property_type:   form.property_type,
@@ -140,6 +169,7 @@ export default function SellPage() {
       owner_name:      form.owner_name.trim(),
       owner_phone:     form.owner_phone.trim(),
       status:          "available",
+      images:          imageUrls,
     };
 
     const { error: err } = await supabase
@@ -160,6 +190,7 @@ export default function SellPage() {
     setSubmitted(false);
     setStep(1);
     setError("");
+    setFiles([]);
     setForm({ property_type:"apartment", title:"", location:"", price:"", bhk:"", land_size_cents:"", description:"", owner_name:"", owner_phone:"" });
   };
 
@@ -394,6 +425,45 @@ export default function SellPage() {
                       rows={3}
                       className="w-full border border-[#E0E0E0] rounded-xl px-4 py-2.5 text-[14px] text-[#212121] placeholder-[#BDBDBD] focus:outline-none focus:border-[#009688] transition-colors resize-none"
                     />
+                  </div>
+
+                  {/* Photos */}
+                  <div>
+                    <FieldLabel>Property Photos (optional)</FieldLabel>
+                    <div className="border-2 border-dashed border-[#E0E0E0] rounded-xl p-4 text-center hover:border-[#009688] transition-colors cursor-pointer relative bg-[#FAFAFA]">
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="flex flex-col items-center gap-2 pointer-events-none">
+                        <span className="text-[24px]">📷</span>
+                        <p className="text-[13px] text-[#616161] font-medium">Click or drag photos here</p>
+                        <p className="text-[11px] text-[#9E9E9E]">Upload up to 5 images (max 10MB each)</p>
+                      </div>
+                    </div>
+                    {files.length > 0 && (
+                      <div className="flex flex-wrap gap-3 mt-3">
+                        {files.map((file, idx) => (
+                          <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#E0E0E0]">
+                            <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeFile(idx)}
+                              className="absolute top-0 right-0 bg-red-500 text-white w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-600 rounded-bl-lg"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <button
