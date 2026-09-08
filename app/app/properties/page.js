@@ -192,12 +192,27 @@ export default function PropertiesPage() {
   const { data: properties = [] } = useQuery({
     queryKey: ["properties"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      const [agentRes, ownerRes] = await Promise.all([
+        supabase
+          .from("properties")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("public_property_listings")
+          .select("*")
+          .eq("status", "available")
+          .order("created_at", { ascending: false })
+      ]);
+      
+      if (agentRes.error) throw agentRes.error;
+      if (ownerRes.error) throw ownerRes.error;
+
+      const agentProps = (agentRes.data || []).map(p => ({ ...p, _source: "agent" }));
+      const ownerProps = (ownerRes.data || []).map(p => ({ ...p, _source: "owner" }));
+
+      return [...agentProps, ...ownerProps].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
     },
   });
 
@@ -716,9 +731,16 @@ function PropertyCard({ property: p, selected, onEdit, onDelete, onMatch }) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          <span className="absolute right-2 top-2 rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">
-            {p.status || "available"}
-          </span>
+          <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+            <span className="rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur">
+              {p.status || "available"}
+            </span>
+            {p._source === "owner" && (
+              <span className="rounded-full bg-amber-500 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                Owner Listed
+              </span>
+            )}
+          </div>
           {p.images.length > 1 && (
             <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1.5">
               <button type="button"
@@ -740,9 +762,16 @@ function PropertyCard({ property: p, selected, onEdit, onDelete, onMatch }) {
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-card/90 backdrop-blur shadow-sm">
             <Home className="h-5 w-5 text-primary" />
           </div>
-          <span className="ml-auto rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur">
-            {p.status || "available"}
-          </span>
+          <div className="ml-auto flex items-center gap-1">
+            <span className="rounded-full bg-card/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur">
+              {p.status || "available"}
+            </span>
+            {p._source === "owner" && (
+              <span className="rounded-full bg-amber-500 text-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                Owner Listed
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -826,12 +855,16 @@ function PropertyCard({ property: p, selected, onEdit, onDelete, onMatch }) {
               </DialogContent>
             </Dialog>
 
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={onEdit} title="Edit listing">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete} title="Delete listing">
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            {p._source !== "owner" && (
+              <>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={onEdit} title="Edit listing">
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={onDelete} title="Delete listing">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -862,6 +895,7 @@ function PropertyPickerCard({ property: p, selected, onClick }) {
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
             <span className="capitalize">{p.property_type}</span>
             {p.price && <><span>·</span><span>{fmtINR(p.price)}</span></>}
+            {p._source === "owner" && <><span>·</span><span className="text-amber-600 font-semibold">Owner Listed</span></>}
           </div>
         </div>
         <ChevronRight className={`h-4 w-4 shrink-0 transition ${selected ? "text-primary" : "text-muted-foreground/40"}`} />

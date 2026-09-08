@@ -48,8 +48,16 @@ function PropertyCard({ property, onClick }) {
     property.land_size_cents && `${property.land_size_cents} cents`,
   ].filter(Boolean).join(" · ");
 
-  const waHref = property.owner_phone
-    ? `https://wa.me/91${property.owner_phone.replace(/\D/g,"").slice(-10)}?text=${encodeURIComponent(`Hi, I'm interested in: ${property.title}`)}`
+  const isAgent = property._source === "agent";
+  const contactPhone = isAgent ? (property.profiles?.phone || "+917907102204") : property.owner_phone;
+  const baseUrl = typeof window !== "undefined" ? window.location.href.split('?')[0] : "";
+  
+  const message = `Hi, I'm interested in: ${property.title}
+Type: ${cap(property.property_type)}
+${property.location ? `Location: ${property.location}\n` : ""}${property.price ? `Price: ${fmtINR(property.price)}\n` : ""}Link: ${baseUrl}?id=${property.id}`;
+
+  const waHref = contactPhone
+    ? `https://wa.me/91${contactPhone.replace(/\D/g,"").slice(-10)}?text=${encodeURIComponent(message)}`
     : null;
 
   return (
@@ -67,7 +75,6 @@ function PropertyCard({ property, onClick }) {
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width:640px) 100vw,(max-width:1024px) 50vw,33vw"
-            unoptimized
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -159,8 +166,17 @@ function PropertyModal({ property, onClose }) {
   const [imgIdx, setImgIdx] = useState(0);
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
 
-  const waHref = property.owner_phone
-    ? `https://wa.me/91${property.owner_phone.replace(/\D/g,"").slice(-10)}?text=${encodeURIComponent(`Hi, I'm interested in: ${property.title}. Please share more details.`)}`
+  const isAgent = property._source === "agent";
+  const contactPhone = isAgent ? (property.profiles?.phone || "+917907102204") : property.owner_phone;
+  const contactName = isAgent ? property.profiles?.full_name || "Agent" : property.owner_name || "Owner";
+  const baseUrl = typeof window !== "undefined" ? window.location.href.split('?')[0] : "";
+
+  const message = `Hi, I'm interested in: ${property.title}
+Type: ${cap(property.property_type)}
+${property.location ? `Location: ${property.location}\n` : ""}${property.price ? `Price: ${fmtINR(property.price)}\n` : ""}Link: ${baseUrl}?id=${property.id}`;
+
+  const waHref = contactPhone
+    ? `https://wa.me/91${contactPhone.replace(/\D/g,"").slice(-10)}?text=${encodeURIComponent(message)}`
     : null;
 
   useEffect(() => {
@@ -192,7 +208,7 @@ function PropertyModal({ property, onClose }) {
         <div className="relative bg-[#E0F2F1] rounded-t-2xl overflow-hidden" style={{ height: 300 }}>
           {property.images?.length > 0 ? (
             <>
-              <Image src={property.images[imgIdx]} alt={property.title} fill className="object-cover" sizes="672px" unoptimized />
+              <Image src={property.images[imgIdx]} alt={property.title} fill className="object-cover" sizes="672px" />
               {property.images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(p => p === 0 ? property.images.length - 1 : p - 1)}
@@ -231,7 +247,7 @@ function PropertyModal({ property, onClose }) {
               <button key={i} onClick={() => setImgIdx(i)}
                 className="relative shrink-0 overflow-hidden rounded-lg transition-opacity"
                 style={{ width: 64, height: 48, outline: i === imgIdx ? "2.5px solid #009688" : "1px solid #E0E0E0", opacity: i === imgIdx ? 1 : 0.6 }}>
-                <Image src={img} alt="" fill className="object-cover" unoptimized sizes="64px" />
+                <Image src={img} alt="" fill className="object-cover" sizes="64px" />
               </button>
             ))}
           </div>
@@ -277,17 +293,17 @@ function PropertyModal({ property, onClose }) {
           )}
 
           {/* Contact */}
-          {(property.owner_name || property.owner_phone || waHref) && (
+          {(contactName || contactPhone || waHref) && (
             <div className="border-t border-[#EEEEEE] pt-4">
               <p className="text-[12px] font-semibold uppercase tracking-wider text-[#9E9E9E] mb-3">Listed By</p>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-[#E0F2F1] flex items-center justify-center text-[#009688] font-bold text-[15px]">
-                    {property.owner_name?.[0] || "A"}
+                    {contactName?.[0] || "A"}
                   </div>
                   <div>
-                    {property.owner_name && <p className="text-[14px] font-semibold text-[#212121]">{property.owner_name}</p>}
-                    {property.owner_phone && <p className="text-[13px] text-[#616161]">{property.owner_phone}</p>}
+                    {contactName && <p className="text-[14px] font-semibold text-[#212121]">{contactName}</p>}
+                    {contactPhone && <p className="text-[13px] text-[#616161]">{contactPhone}</p>}
                   </div>
                 </div>
                 {waHref && (
@@ -366,9 +382,28 @@ function ListingsContent() {
 
       if (agentRes.error) console.error("Agent properties error:", agentRes.error);
       if (ownerRes.error) console.error("Owner listings error:", ownerRes.error);
+      
+      let agentData = agentRes.data || [];
+      if (agentData.length > 0) {
+        const agentIds = [...new Set(agentData.map(p => p.agent_id).filter(Boolean))];
+        if (agentIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, phone")
+            .in("id", agentIds);
+            
+          if (profilesError) {
+            console.error("Profiles error:", profilesError);
+          } else if (profilesData) {
+            const profilesMap = {};
+            profilesData.forEach(p => { profilesMap[p.id] = p; });
+            agentData = agentData.map(p => ({ ...p, profiles: profilesMap[p.agent_id] }));
+          }
+        }
+      }
 
       // Tag each source so we can show a badge
-      const agentProps = (agentRes.data || []).map((p) => ({ ...p, _source: "agent" }));
+      const agentProps = agentData.map((p) => ({ ...p, _source: "agent" }));
       const ownerProps = (ownerRes.data || []).map((p) => ({ ...p, _source: "owner" }));
 
       // Merge and sort by newest first
