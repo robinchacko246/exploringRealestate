@@ -346,6 +346,7 @@ function SkeletonCard() {
 function ListingsContent() {
   const searchParams = useSearchParams();
   const typeParam = searchParams.get("type");
+  const idParam = searchParams.get("id");
   const validTypes = CATEGORIES.map((c) => c.id);
   const initialCategory = typeParam && validTypes.includes(typeParam) ? typeParam : "all";
 
@@ -417,6 +418,18 @@ function ListingsContent() {
     }
     fetchProps();
   }, []);
+
+  // Auto-open modal if ID is in URL
+  const lastOpenedId = useRef(null);
+  useEffect(() => {
+    if (idParam && properties.length > 0 && lastOpenedId.current !== idParam) {
+      const propToOpen = properties.find((p) => p.id === idParam);
+      if (propToOpen) {
+        setSelectedProperty(propToOpen);
+        lastOpenedId.current = idParam;
+      }
+    }
+  }, [idParam, properties]);
 
   const filtered = useMemo(() => {
     let list = [...properties];
