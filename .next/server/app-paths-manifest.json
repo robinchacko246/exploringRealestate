@@ -1,7 +1,7 @@
 {
   "/auth/page": "app/auth/page.js",
+  "/listings/page": "app/listings/page.js",
   "/sell/page": "app/sell/page.js",
   "/app/page": "app/app/page.js",
-  "/app/properties/page": "app/app/properties/page.js",
-  "/listings/page": "app/listings/page.js"
+  "/app/properties/page": "app/app/properties/page.js"
 }

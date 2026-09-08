@@ -75,6 +75,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width:640px) 100vw,(max-width:1024px) 50vw,33vw"
+            unoptimized
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -208,7 +209,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
         <div className="relative bg-[#E0F2F1] rounded-t-2xl overflow-hidden" style={{ height: 300 }}>
           {property.images?.length > 0 ? (
             <>
-              <Image src={property.images[imgIdx]} alt={property.title} fill className="object-cover" sizes="672px" />
+              <Image src={property.images[imgIdx]} alt={property.title} fill className="object-cover" sizes="672px" unoptimized />
               {property.images.length > 1 && (
                 <>
                   <button onClick={() => setImgIdx(p => p === 0 ? property.images.length - 1 : p - 1)}
@@ -247,7 +248,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
               <button key={i} onClick={() => setImgIdx(i)}
                 className="relative shrink-0 overflow-hidden rounded-lg transition-opacity"
                 style={{ width: 64, height: 48, outline: i === imgIdx ? "2.5px solid #009688" : "1px solid #E0E0E0", opacity: i === imgIdx ? 1 : 0.6 }}>
-                <Image src={img} alt="" fill className="object-cover" sizes="64px" />
+                <Image src={img} alt="" fill className="object-cover" unoptimized sizes="64px" />
               </button>
             ))}
           </div>
