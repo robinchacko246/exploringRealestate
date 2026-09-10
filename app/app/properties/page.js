@@ -542,6 +542,7 @@ export default function PropertiesPage() {
                           score={score}
                           reasons={reasons}
                           misses={misses}
+                          selectedProperty={selectedProperty}
                         />
                       ))}
                     </div>
@@ -797,13 +798,34 @@ function PropertyCard({ property: p, selected, onEdit, onDelete, onMatch }) {
           {p.bhk && <Chip label="BHK" value={p.bhk} icon={BedDouble} />}
         </div>
 
-        {(p.owner_name || p.owner_phone) && (
-          <a href={p.owner_phone ? `tel:${p.owner_phone}` : undefined}
-            className="mt-3 flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-2 text-xs transition hover:bg-muted">
-            <User className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="font-medium">{p.owner_name || "Owner"}</span>
-            {p.owner_phone && <><span className="text-muted-foreground">·</span><Phone className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">{p.owner_phone}</span></>}
-          </a>
+        {p._source === "owner" ? (
+          <div className="mt-3 flex items-center justify-between rounded-lg bg-amber-500/10 border border-amber-500/20 px-2.5 py-2 text-xs">
+            <div className="flex items-center gap-1.5 font-medium truncate">
+              <User className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="truncate">
+                {p.hide_owner_contact !== false
+                  ? (p.admin_contact_name || "PropertyFlow Desk")
+                  : (p.owner_name || "Owner")}
+              </span>
+            </div>
+            <a
+              href={`tel:${p.hide_owner_contact !== false ? (p.admin_contact_phone || "+918138802204") : p.owner_phone}`}
+              className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-bold hover:underline shrink-0"
+              title="Call Contact"
+            >
+              <Phone className="h-3 w-3" />
+              <span>{p.hide_owner_contact !== false ? (p.admin_contact_phone || "+918138802204") : p.owner_phone}</span>
+            </a>
+          </div>
+        ) : (
+          (p.owner_name || p.owner_phone) && (
+            <a href={p.owner_phone ? `tel:${p.owner_phone}` : undefined}
+              className="mt-3 flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-2 text-xs transition hover:bg-muted">
+              <User className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium">{p.owner_name || "Owner"}</span>
+              {p.owner_phone && <><span className="text-muted-foreground">·</span><Phone className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">{p.owner_phone}</span></>}
+            </a>
+          )
         )}
 
         {p.description && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>}
@@ -916,7 +938,7 @@ function PropertyPickerCard({ property: p, selected, onClick }) {
 }
 
 /* ─────────────── Match Card (client requirement match) ─────────────── */
-function MatchCard({ requirement: r, score, reasons, misses }) {
+function MatchCard({ requirement: r, score, reasons, misses, selectedProperty }) {
   const client = r.clients;
   const pct = Math.min(100, score);
   const grade = pct >= 80 ? "excellent" : pct >= 60 ? "good" : "partial";
@@ -995,7 +1017,16 @@ function MatchCard({ requirement: r, score, reasons, misses }) {
               </a>
             )}
             {client.whatsapp && (
-              <a href={`https://wa.me/${client.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
+              <a
+                href={
+                  selectedProperty
+                    ? `https://wa.me/91${client.whatsapp.replace(/\D/g, "").slice(-10)}?text=${encodeURIComponent(
+                        `Hi ${client.name}, I found a matching property for you on PropertyFlow!\n\n🏡 *${selectedProperty.title}*\n📍 Location: ${selectedProperty.location || "N/A"}\n💰 Price: ${fmtINR(selectedProperty.price)}\n\nView details & images here:\nhttps://exploringrealestate.vercel.app/listings?id=${selectedProperty.id}`
+                      )}`
+                    : `https://wa.me/${client.whatsapp.replace(/\D/g, "")}`
+                }
+                target="_blank"
+                rel="noreferrer"
                 className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition hover:bg-primary/20">
                 <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
               </a>
