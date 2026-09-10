@@ -49,7 +49,14 @@ function PropertyCard({ property, onClick }) {
   ].filter(Boolean).join(" · ");
 
   const isAgent = property._source === "agent";
-  const contactPhone = isAgent ? (property.profiles?.phone || "+917907102204") : property.owner_phone;
+  const hideOwner = Boolean(property.hide_owner_contact);
+  const rawAdminPhone = property.admin_contact_phone;
+  const adminPhoneToUse = (!rawAdminPhone || rawAdminPhone.includes("7907102204")) ? "+918138802204" : rawAdminPhone;
+  const contactPhone = isAgent
+    ? (property.profiles?.phone || "+918138802204")
+    : hideOwner
+    ? adminPhoneToUse
+    : property.owner_phone;
   const baseUrl = typeof window !== "undefined" ? window.location.href.split('?')[0] : "";
   
   const message = `Hi, I'm interested in: ${property.title}
@@ -168,8 +175,19 @@ function PropertyModal({ property, onClose }) {
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
 
   const isAgent = property._source === "agent";
-  const contactPhone = isAgent ? (property.profiles?.phone || "+917907102204") : property.owner_phone;
-  const contactName = isAgent ? property.profiles?.full_name || "Agent" : property.owner_name || "Owner";
+  const hideOwner = Boolean(property.hide_owner_contact);
+  const rawAdminPhone = property.admin_contact_phone;
+  const adminPhoneToUse = (!rawAdminPhone || rawAdminPhone.includes("7907102204")) ? "+918138802204" : rawAdminPhone;
+  const contactPhone = isAgent
+    ? (property.profiles?.phone || "+918138802204")
+    : hideOwner
+    ? adminPhoneToUse
+    : property.owner_phone;
+  const contactName = isAgent
+    ? (property.profiles?.full_name || "Agent")
+    : hideOwner
+    ? (property.admin_contact_name || "PropertyFlow Desk")
+    : (property.owner_name || "Owner");
   const baseUrl = typeof window !== "undefined" ? window.location.href.split('?')[0] : "";
 
   const message = `Hi, I'm interested in: ${property.title}

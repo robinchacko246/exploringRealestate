@@ -10,6 +10,10 @@ import {
   CreditCard,
   Sparkles,
   LogOut,
+  ShieldCheck,
+  UserCheck,
+  Inbox,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useAdmin } from "@/hooks/use-admin";
 
 const main = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard },
@@ -35,11 +40,21 @@ const main = [
   { title: "Billing & Plans", url: "/app/billing", icon: CreditCard },
 ];
 
+const adminNav = [
+  { title: "Admin Overview", url: "/app/admin", icon: ShieldCheck },
+  { title: "User & Roles", url: "/app/admin/users", icon: UserCheck },
+  { title: "Public Listings", url: "/app/admin/listings", icon: Inbox },
+  { title: "Subscriptions", url: "/app/admin/subscriptions", icon: CreditCard },
+  { title: "All Properties", url: "/app/admin/properties", icon: Building2 },
+  { title: "Analytics", url: "/app/admin/analytics", icon: BarChart3 },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = usePathname();
   const { user } = useAuth();
+  const { isAdmin, role } = useAdmin();
   const router = useRouter();
 
   const isActive = (url) =>
@@ -84,6 +99,32 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Navigation Group (Rendered ONLY if user is an Admin) */}
+        {isAdmin && (
+          <SidebarGroup className="mt-2">
+            <div className="flex items-center justify-between px-2">
+              <SidebarGroupLabel className="text-sidebar-foreground/50 flex items-center gap-1.5 font-semibold text-amber-500/90">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Admin Console</span>
+              </SidebarGroupLabel>
+            </div>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminNav.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.title}>
+                      <Link href={item.url} className="flex items-center gap-3 text-amber-600 dark:text-amber-400 hover:text-amber-500">
+                        <item.icon className="h-4 w-4 shrink-0 text-amber-500" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/40 p-2">
@@ -94,7 +135,15 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-xs font-medium text-sidebar-foreground">{user?.email}</span>
-              <span className="text-[10px] text-sidebar-foreground/50">Agent</span>
+              <span className="text-[10px] text-sidebar-foreground/50 capitalize flex items-center gap-1">
+                {isAdmin ? (
+                  <span className="text-amber-500 font-semibold flex items-center gap-1">
+                    <ShieldCheck className="h-3 w-3 inline" /> Admin
+                  </span>
+                ) : (
+                  <span>Agent</span>
+                )}
+              </span>
             </div>
           )}
           <button
