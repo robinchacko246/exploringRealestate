@@ -190,12 +190,14 @@ export default function PropertiesPage() {
   const [saving, setSaving] = useState(false);
 
   const { data: properties = [] } = useQuery({
-    queryKey: ["properties"],
+    queryKey: ["properties", user?.id],
     queryFn: async () => {
+      if (!user) return [];
       const [agentRes, ownerRes] = await Promise.all([
         supabase
           .from("properties")
           .select("*")
+          .eq("agent_id", user.id)
           .order("created_at", { ascending: false }),
         supabase
           .from("public_property_listings")
@@ -214,17 +216,21 @@ export default function PropertiesPage() {
         (a, b) => new Date(b.created_at) - new Date(a.created_at)
       );
     },
+    enabled: !!user,
   });
 
   const { data: requirements = [] } = useQuery({
-    queryKey: ["requirements-full"],
+    queryKey: ["requirements-full", user?.id],
     queryFn: async () => {
+      if (!user) return [];
       const { data } = await supabase
         .from("requirements")
         .select("*, clients(id, name, phone, whatsapp, email, category)")
+        .eq("agent_id", user.id)
         .order("created_at", { ascending: false });
       return data ?? [];
     },
+    enabled: !!user,
   });
 
   /* ── Add ── */

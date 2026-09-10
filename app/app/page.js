@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, Building2, Flame, CalendarClock, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
+import { useAuth } from "@/hooks/use-auth";
+
 function StatCard({ icon: Icon, label, value, hint, accent }) {
   return (
     <div className={`relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]`}>
@@ -23,16 +25,20 @@ function StatCard({ icon: Icon, label, value, hint, accent }) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+
   const { data: stats } = useQuery({
-    queryKey: ["dashboard-stats"],
+    queryKey: ["dashboard-stats", user?.id],
     queryFn: async () => {
+      if (!user) return {};
       const [clients, properties, hot, today] = await Promise.all([
-        supabase.from("clients").select("id, category", { count: "exact" }),
-        supabase.from("properties").select("id", { count: "exact", head: true }),
-        supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "hot"),
+        supabase.from("clients").select("id, category", { count: "exact" }).eq("agent_id", user.id),
+        supabase.from("properties").select("id", { count: "exact", head: true }).eq("agent_id", user.id),
+        supabase.from("clients").select("id", { count: "exact", head: true }).eq("agent_id", user.id).eq("status", "hot"),
         supabase
           .from("reminders")
           .select("id", { count: "exact", head: true })
+          .eq("agent_id", user.id)
           .eq("status", "pending")
           .lte("due_at", new Date(new Date().setHours(23, 59, 59)).toISOString()),
       ]);
@@ -47,31 +53,38 @@ export default function Dashboard() {
         today: today.count ?? 0,
       };
     },
+    enabled: !!user,
   });
 
   const { data: recentClients } = useQuery({
-    queryKey: ["recent-clients"],
+    queryKey: ["recent-clients", user?.id],
     queryFn: async () => {
+      if (!user) return [];
       const { data } = await supabase
         .from("clients")
         .select("id, name, category, status, last_contact_at, created_at")
+        .eq("agent_id", user.id)
         .order("created_at", { ascending: false })
         .limit(6);
       return data ?? [];
     },
+    enabled: !!user,
   });
 
   const { data: todayReminders } = useQuery({
-    queryKey: ["today-reminders"],
+    queryKey: ["today-reminders", user?.id],
     queryFn: async () => {
+      if (!user) return [];
       const { data } = await supabase
         .from("reminders")
         .select("id, title, due_at, type, clients(name)")
+        .eq("agent_id", user.id)
         .eq("status", "pending")
         .order("due_at", { ascending: true })
         .limit(5);
       return data ?? [];
     },
+    enabled: !!user,
   });
 
   return (
