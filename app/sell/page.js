@@ -181,6 +181,34 @@ export default function SellPage() {
       console.error(err);
       setSubmitting(false);
     } else {
+      // ── Fire n8n webhook via server-side proxy (avoids CORS + hides n8n URL) ─
+      fetch("/api/n8n-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // ── Property details ──────────────────────────────────────────────
+          listing_type:    payload.listing_type,
+          property_type:   payload.property_type,
+          title:           payload.title,
+          location:        payload.location,
+          price:           payload.price,
+          bhk:             payload.bhk,
+          land_size_cents: payload.land_size_cents,
+          description:     payload.description,
+          // ── Owner / contact ───────────────────────────────────────────────
+          owner_name:      payload.owner_name,
+          owner_phone:     payload.owner_phone,
+          // ── Media & meta ──────────────────────────────────────────────────
+          images:          payload.images,
+          status:          payload.status,
+          submitted_at:    new Date().toISOString(),
+          source:          "exploringrealestate.vercel.app/sell",
+        }),
+      }).catch((webhookErr) =>
+        console.warn("n8n proxy call failed (non-fatal):", webhookErr)
+      );
+      // ─────────────────────────────────────────────────────────────────────────
+
       setSubmitted(true);
       setSubmitting(false);
     }

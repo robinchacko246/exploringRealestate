@@ -1,8 +1,4 @@
 {
-  "/auth/page": "app/auth/page.js",
-  "/listings/page": "app/listings/page.js",
-  "/app/page": "app/app/page.js",
-  "/app/reminders/page": "app/app/reminders/page.js",
-  "/app/properties/page": "app/app/properties/page.js",
-  "/app/billing/page": "app/app/billing/page.js"
+  "/api/n8n-webhook/route": "app/api/n8n-webhook/route.js",
+  "/sell/page": "app/sell/page.js"
 }
