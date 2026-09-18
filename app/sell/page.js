@@ -158,18 +158,22 @@ export default function SellPage() {
     }
 
     const payload = {
-      listing_type:    listingType,
-      property_type:   form.property_type,
-      title:           form.title.trim(),
-      location:        form.location.trim() || null,
-      price:           form.price ? parseFloat(form.price.replace(/[^0-9.]/g, "")) : null,
-      bhk:             HAS_BHK.includes(form.property_type) && form.bhk ? parseInt(form.bhk) : null,
-      land_size_cents: HAS_LAND.includes(form.property_type) && form.land_size_cents ? parseFloat(form.land_size_cents) : null,
-      description:     form.description.trim() || null,
-      owner_name:      form.owner_name.trim(),
-      owner_phone:     form.owner_phone.trim(),
-      status:          "available",
-      images:          imageUrls,
+      listing_type:         listingType,
+      property_type:        form.property_type,
+      title:                form.title.trim(),
+      location:             form.location.trim() || null,
+      price:                form.price ? parseFloat(form.price.replace(/[^0-9.]/g, "")) : null,
+      bhk:                  HAS_BHK.includes(form.property_type) && form.bhk ? parseInt(form.bhk) : null,
+      land_size_cents:      HAS_LAND.includes(form.property_type) && form.land_size_cents ? parseFloat(form.land_size_cents) : null,
+      description:          form.description.trim() || null,
+      owner_name:           form.owner_name.trim(),
+      owner_phone:          form.owner_phone.trim(),
+      status:               "available",
+      images:               imageUrls,
+      // Always hide owner contact and route to admin by default
+      hide_owner_contact:   true,
+      admin_contact_phone:  "+918138802204",
+      admin_contact_name:   "PropertyFlow Desk",
     };
 
     const { error: err } = await supabase

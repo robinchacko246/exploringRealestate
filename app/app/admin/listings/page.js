@@ -38,7 +38,7 @@ export default function ModerationListingsPage() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   // Contact modal state
-  const [hideOwnerContact, setHideOwnerContact] = useState(true);
+  const [hideOwnerContact, setHideOwnerContact] = useState(true); // Default: hide owner contact
   const [adminPhone, setAdminPhone] = useState("+918138802204");
   const [adminName, setAdminName] = useState("PropertyFlow Desk");
 
@@ -120,7 +120,8 @@ export default function ModerationListingsPage() {
 
   const openContactDialog = (item) => {
     setSelectedListing(item);
-    setHideOwnerContact(item.hide_owner_contact !== false);
+    // Always default to true (enabled) — owner contact is always hidden unless admin explicitly disables
+    setHideOwnerContact(true);
     const phone = item.admin_contact_phone;
     const phoneToUse = (!phone || phone.includes("7907102204")) ? "+918138802204" : phone;
     setAdminPhone(phoneToUse);
