@@ -14,7 +14,6 @@ import {
   MapPin,
   Search,
   Trash2,
-  ShieldAlert,
   Eye,
   EyeOff,
   Settings2,
@@ -24,6 +23,14 @@ import {
   StickyNote,
   CalendarDays,
   ListChecks,
+  MessageCircle,
+  ExternalLink,
+  Images,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Tag,
+  CheckCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,6 +45,8 @@ import {
 export default function ModerationListingsPage() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
+  const [listingTypeFilter, setListingTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedListing, setSelectedListing] = useState(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -47,18 +56,22 @@ export default function ModerationListingsPage() {
   const [adminPhone, setAdminPhone] = useState("+918138802204");
   const [adminName, setAdminName] = useState("PropertyFlow Desk");
 
-  // Feature 2: Admin notes / rejection reason
+  // Admin notes / rejection reason state
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
   const [notesListing, setNotesListing] = useState(null);
   const [notesText, setNotesText] = useState("");
   const [pendingRejectId, setPendingRejectId] = useState(null);
 
-  // Feature 3: Bulk select
+  // Bulk select state
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkMode, setBulkMode] = useState(false);
 
-  // Feature 4: Quick-copy phone
+  // Quick-copy phone state
   const [copiedPhone, setCopiedPhone] = useState(null);
+
+  // Image Gallery Lightbox state
+  const [galleryListing, setGalleryListing] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Fetch public property listings
   const { data: listings = [], isLoading, refetch } = useQuery({
@@ -86,8 +99,18 @@ export default function ModerationListingsPage() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success("Listing status updated!");
+    onSuccess: (_, { newStatus }) => {
+      const label =
+        newStatus === "available"
+          ? "Approved & Live"
+          : newStatus === "sold"
+          ? "Marked as Sold"
+          : newStatus === "pending"
+          ? "Moved to Pending"
+          : newStatus === "rejected"
+          ? "Rejected"
+          : newStatus;
+      toast.success(`Listing status updated: ${label}`);
       queryClient.invalidateQueries(["admin-public-listings"]);
     },
     onError: (err) => {
@@ -95,7 +118,7 @@ export default function ModerationListingsPage() {
     },
   });
 
-  // Feature 2: Admin notes mutation
+  // Admin notes mutation
   const updateNotesMutation = useMutation({
     mutationFn: async ({ id, admin_notes, newStatus }) => {
       const update = { admin_notes };
@@ -121,7 +144,7 @@ export default function ModerationListingsPage() {
     },
   });
 
-  // Feature 3: Bulk status mutation
+  // Bulk status mutation
   const bulkStatusMutation = useMutation({
     mutationFn: async ({ ids, newStatus }) => {
       const { error } = await supabase
@@ -198,7 +221,7 @@ export default function ModerationListingsPage() {
     });
   };
 
-  // Feature 2: Notes modal helpers
+  // Notes modal helpers
   const openNotesModal = (item, withReject = false) => {
     setNotesListing(item);
     setNotesText(item.admin_notes || "");
@@ -215,7 +238,7 @@ export default function ModerationListingsPage() {
     });
   };
 
-  // Feature 3: Bulk select helpers
+  // Bulk select helpers
   const toggleSelectId = (id) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -227,7 +250,7 @@ export default function ModerationListingsPage() {
   const selectAll = () => setSelectedIds(new Set(filteredListings.map((l) => l.id)));
   const clearSelection = () => setSelectedIds(new Set());
 
-  // Feature 4: Copy phone
+  // Copy phone helper
   const copyPhone = (phone, id) => {
     navigator.clipboard.writeText(phone).then(() => {
       setCopiedPhone(id);
@@ -236,7 +259,23 @@ export default function ModerationListingsPage() {
     });
   };
 
-  // Feature 1: Relative date formatter
+  // Gallery helpers
+  const openGallery = (listing, startIndex = 0) => {
+    setGalleryListing(listing);
+    setActiveImageIndex(startIndex);
+  };
+
+  const prevImage = () => {
+    if (!galleryListing?.images?.length) return;
+    setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : galleryListing.images.length - 1));
+  };
+
+  const nextImage = () => {
+    if (!galleryListing?.images?.length) return;
+    setActiveImageIndex((prev) => (prev < galleryListing.images.length - 1 ? prev + 1 : 0));
+  };
+
+  // Relative date formatter
   const formatDate = (ts) => {
     if (!ts) return "—";
     const d = new Date(ts);
@@ -250,19 +289,41 @@ export default function ModerationListingsPage() {
     return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
   };
 
-  const filteredListings = listings.filter((item) => {
-    const matchesSearch =
-      (item.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.owner_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.owner_phone || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" ? true : item.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Filter & Sort listings
+  const filteredListings = listings
+    .filter((item) => {
+      const matchesSearch =
+        (item.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.location || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.owner_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.owner_phone || "").toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" ? true : item.status === statusFilter;
+      const matchesType =
+        listingTypeFilter === "all"
+          ? true
+          : (item.listing_type || "sell").toLowerCase() === listingTypeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      if (sortBy === "newest") {
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      }
+      if (sortBy === "oldest") {
+        return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      }
+      if (sortBy === "price_low") {
+        return Number(a.price || 0) - Number(b.price || 0);
+      }
+      if (sortBy === "price_high") {
+        return Number(b.price || 0) - Number(a.price || 0);
+      }
+      return 0;
+    });
 
-  const pendingCount   = listings.filter((l) => l.status === "pending").length;
+  const pendingCount = listings.filter((l) => l.status === "pending").length;
   const availableCount = listings.filter((l) => l.status === "available").length;
-  const rejectedCount  = listings.filter((l) => l.status === "rejected").length;
+  const soldCount = listings.filter((l) => l.status === "sold").length;
+  const rejectedCount = listings.filter((l) => l.status === "rejected").length;
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -276,7 +337,7 @@ export default function ModerationListingsPage() {
             </h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Approve public listings and manage whether buyers see the owner&apos;s direct phone or your Admin phone number.
+            Approve submissions, verify owner details, inspect gallery photos, and manage contact routing.
           </p>
         </div>
 
@@ -286,9 +347,11 @@ export default function ModerationListingsPage() {
               {pendingCount} Pending Review
             </span>
           )}
-          {/* Feature 3: Bulk mode toggle */}
           <button
-            onClick={() => { setBulkMode((v) => !v); setSelectedIds(new Set()); }}
+            onClick={() => {
+              setBulkMode((v) => !v);
+              setSelectedIds(new Set());
+            }}
             className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
               bulkMode
                 ? "border-amber-500 bg-amber-500/10 text-amber-600"
@@ -301,25 +364,32 @@ export default function ModerationListingsPage() {
         </div>
       </div>
 
-      {/* Feature 3: Bulk action bar */}
+      {/* Bulk action floating/sticky bar */}
       {bulkMode && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 shadow-sm">
           <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
             {selectedIds.size} selected
           </span>
           <button onClick={selectAll} className="text-xs underline text-muted-foreground hover:text-foreground">
-            Select all ({filteredListings.length})
+            Select all visible ({filteredListings.length})
           </button>
           <button onClick={clearSelection} className="text-xs underline text-muted-foreground hover:text-foreground">
             Clear
           </button>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             <button
               disabled={selectedIds.size === 0 || bulkStatusMutation.isPending}
               onClick={() => bulkStatusMutation.mutate({ ids: [...selectedIds], newStatus: "available" })}
               className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-40"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Approve All
+            </button>
+            <button
+              disabled={selectedIds.size === 0 || bulkStatusMutation.isPending}
+              onClick={() => bulkStatusMutation.mutate({ ids: [...selectedIds], newStatus: "sold" })}
+              className="flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 disabled:opacity-40"
+            >
+              <CheckCheck className="h-3.5 w-3.5" /> Mark Sold
             </button>
             <button
               disabled={selectedIds.size === 0 || bulkStatusMutation.isPending}
@@ -333,7 +403,7 @@ export default function ModerationListingsPage() {
       )}
 
       {/* Status Filter Cards */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-5">
         <button
           onClick={() => setStatusFilter("all")}
           className={`rounded-xl border p-4 text-left transition-all ${
@@ -371,10 +441,26 @@ export default function ModerationListingsPage() {
           }`}
         >
           <div className="text-xs uppercase text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Approved
+            <CheckCircle2 className="h-3.5 w-3.5" /> Approved / Live
           </div>
           <div className="mt-1 font-display text-2xl font-bold text-emerald-600 dark:text-emerald-400">
             {availableCount}
+          </div>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("sold")}
+          className={`rounded-xl border p-4 text-left transition-all ${
+            statusFilter === "sold"
+              ? "border-indigo-500 bg-indigo-500/10 shadow-sm"
+              : "border-border bg-card hover:bg-muted/40"
+          }`}
+        >
+          <div className="text-xs uppercase text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-1">
+            <CheckCheck className="h-3.5 w-3.5" /> Sold / Closed
+          </div>
+          <div className="mt-1 font-display text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            {soldCount}
           </div>
         </button>
 
@@ -395,218 +481,498 @@ export default function ModerationListingsPage() {
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search listings by title, location, or seller name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full rounded-xl border border-border bg-card pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-        />
+      {/* Search, Listing Type Filter & Sort Controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by title, location, or seller name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-xl border border-border bg-card pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+        </div>
+
+        {/* Listing Type Pills (Sell / Rent) */}
+        <div className="flex items-center rounded-xl border border-border bg-card p-1">
+          <button
+            onClick={() => setListingTypeFilter("all")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              listingTypeFilter === "all"
+                ? "bg-amber-500 text-slate-950 shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All Types
+          </button>
+          <button
+            onClick={() => setListingTypeFilter("sell")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              listingTypeFilter === "sell"
+                ? "bg-amber-500 text-slate-950 shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            For Sale
+          </button>
+          <button
+            onClick={() => setListingTypeFilter("rent")}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              listingTypeFilter === "rent"
+                ? "bg-amber-500 text-slate-950 shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            For Rent
+          </button>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground">
+          <ArrowUpDown className="h-3.5 w-3.5 text-amber-500" />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-transparent text-foreground focus:outline-none cursor-pointer text-xs"
+          >
+            <option value="newest" className="bg-card text-foreground">Newest First</option>
+            <option value="oldest" className="bg-card text-foreground">Oldest First</option>
+            <option value="price_high" className="bg-card text-foreground">Price: High to Low</option>
+            <option value="price_low" className="bg-card text-foreground">Price: Low to High</option>
+          </select>
+        </div>
       </div>
 
       {/* Listings Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredListings.length > 0 ? (
-          filteredListings.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => bulkMode && toggleSelectId(item.id)}
-              className={`flex flex-col justify-between rounded-2xl border bg-card overflow-hidden shadow-sm transition-all ${
-                bulkMode ? "cursor-pointer" : ""
-              } ${
-                selectedIds.has(item.id)
-                  ? "border-amber-500 ring-2 ring-amber-500/40"
-                  : "border-border hover:border-amber-500/40 hover:shadow-md"
-              }`}
-            >
-              <div>
-                {/* Property Image Header */}
-                <div className="relative h-44 bg-muted overflow-hidden">
-                  {item.images && item.images.length > 0 ? (
-                    <img
-                      src={item.images[0]}
-                      alt={item.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-full w-full place-items-center bg-gradient-to-br from-amber-500/10 to-muted">
-                      <Building2 className="h-10 w-10 text-amber-500/40" />
-                    </div>
-                  )}
+          filteredListings.map((item) => {
+            const hasMultipleImages = item.images && item.images.length > 1;
+            const isAvailable = item.status === "available";
+            const isSold = item.status === "sold";
+            const isRejected = item.status === "rejected";
+            const isPending = item.status === "pending";
 
-                  {/* Feature 3: Bulk checkbox */}
-                  {bulkMode && (
-                    <div
-                      onClick={(e) => { e.stopPropagation(); toggleSelectId(item.id); }}
-                      className={`absolute top-3 left-3 h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
-                        selectedIds.has(item.id)
-                          ? "bg-amber-500 border-amber-500"
-                          : "bg-white/80 border-gray-400"
+            // Sanitized owner phone for WhatsApp / Call
+            const cleanPhone = (item.owner_phone || "").replace(/\D/g, "");
+            const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+            const waMessage = `Hi ${item.owner_name}, regarding your property listing "${item.title}" on PropertyFlow:`;
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => bulkMode && toggleSelectId(item.id)}
+                className={`flex flex-col justify-between rounded-2xl border bg-card overflow-hidden shadow-sm transition-all ${
+                  bulkMode ? "cursor-pointer" : ""
+                } ${
+                  selectedIds.has(item.id)
+                    ? "border-amber-500 ring-2 ring-amber-500/40"
+                    : "border-border hover:border-amber-500/40 hover:shadow-md"
+                }`}
+              >
+                <div>
+                  {/* Property Image Header */}
+                  <div className="relative h-48 bg-muted overflow-hidden group/img">
+                    {item.images && item.images.length > 0 ? (
+                      <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        className="h-full w-full object-cover cursor-pointer transition-transform duration-300 group-hover/img:scale-105"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openGallery(item, 0);
+                        }}
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center bg-gradient-to-br from-amber-500/10 to-muted">
+                        <Building2 className="h-10 w-10 text-amber-500/40" />
+                      </div>
+                    )}
+
+                    {/* Bulk Selection Checkbox */}
+                    {bulkMode && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelectId(item.id);
+                        }}
+                        className={`absolute top-3 left-3 h-5 w-5 rounded border-2 flex items-center justify-center transition-colors shadow-sm ${
+                          selectedIds.has(item.id)
+                            ? "bg-amber-500 border-amber-500"
+                            : "bg-white/90 border-gray-400"
+                        }`}
+                      >
+                        {selectedIds.has(item.id) && <Check className="h-3 w-3 text-white font-bold" />}
+                      </div>
+                    )}
+
+                    {/* Gallery Count Pill */}
+                    {item.images && item.images.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openGallery(item, 0);
+                        }}
+                        className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-md hover:bg-black/80 transition-colors"
+                        style={{ marginLeft: bulkMode ? "28px" : "0" }}
+                      >
+                        <Images className="h-3 w-3" />
+                        <span>{item.images.length} photo{item.images.length > 1 ? "s" : ""}</span>
+                      </button>
+                    )}
+
+                    {/* Status Badge */}
+                    <span
+                      className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-xs font-bold uppercase backdrop-blur-md shadow-sm ${
+                        isAvailable
+                          ? "bg-emerald-500/90 text-white"
+                          : isPending
+                          ? "bg-amber-500/90 text-slate-950"
+                          : isSold
+                          ? "bg-indigo-600/90 text-white"
+                          : "bg-destructive/90 text-white"
                       }`}
                     >
-                      {selectedIds.has(item.id) && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                  )}
-
-                  <span
-                    className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-xs font-bold uppercase backdrop-blur-md shadow-sm ${
-                      item.status === "available"
-                        ? "bg-emerald-500/90 text-white"
-                        : item.status === "pending"
-                        ? "bg-amber-500/90 text-slate-950"
-                        : "bg-destructive/90 text-white"
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-
-                  <span className="absolute bottom-3 left-3 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm capitalize">
-                    {item.listing_type || "sell"} • {item.property_type || "Property"}
-                  </span>
-
-                  {/* Feature 1: Submission date bottom-right */}
-                  <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-black/60 px-2 py-0.5 text-[11px] text-white/80 backdrop-blur-sm">
-                    <CalendarDays className="h-3 w-3" />
-                    {formatDate(item.created_at)}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="p-4 space-y-3">
-                  <div>
-                    <h3 className="font-display text-base font-bold line-clamp-1">
-                      {item.title}
-                    </h3>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                      <MapPin className="h-3.5 w-3.5 text-amber-500" />
-                      <span className="truncate">{item.location || "Location not provided"}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-baseline justify-between border-y border-border py-2 text-xs">
-                    <span className="font-display text-lg font-extrabold text-amber-600 dark:text-amber-400">
-                      ₹{Number(item.price || 0).toLocaleString()}
+                      {item.status}
                     </span>
-                    <div className="text-muted-foreground space-x-2">
-                      {item.bhk && <span>{item.bhk} BHK</span>}
-                      {item.land_size_cents && <span>{item.land_size_cents} cents</span>}
-                    </div>
+
+                    {/* Listing Type & Category */}
+                    <span className="absolute bottom-3 left-3 rounded-md bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm capitalize">
+                      {item.listing_type || "sell"} • {item.property_type || "Property"}
+                    </span>
+
+                    {/* Submission Date */}
+                    <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-black/65 px-2 py-0.5 text-[11px] text-white/90 backdrop-blur-sm">
+                      <CalendarDays className="h-3 w-3" />
+                      {formatDate(item.created_at)}
+                    </span>
                   </div>
 
-                  {/* Owner & Admin Contact Info */}
-                  <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-xs space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1 font-semibold text-foreground">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        Owner: {item.owner_name}
-                      </span>
-                      {/* Feature 4: Quick-copy phone */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); copyPhone(item.owner_phone, item.id); }}
-                        title="Copy phone number"
-                        className="flex items-center gap-1 font-mono text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {copiedPhone === item.id
-                          ? <Check className="h-3 w-3 text-emerald-500" />
-                          : <Copy className="h-3 w-3" />}
-                        {item.owner_phone}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t border-border/50 pt-2">
-                      <div className="flex items-center gap-1.5 font-medium">
-                        {item.hide_owner_contact !== false ? (
-                          <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-bold">
-                            <EyeOff className="h-3.5 w-3.5" /> Showing Admin Phone
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-muted-foreground">
-                            <Eye className="h-3.5 w-3.5" /> Owner Phone Public
-                          </span>
-                        )}
+                  {/* Content Area */}
+                  <div className="p-4 space-y-3">
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-display text-base font-bold line-clamp-1">
+                          {item.title}
+                        </h3>
+                        {/* Live listing external link */}
+                        <a
+                          href={`/listings?id=${item.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title="View on public site"
+                          className="text-muted-foreground hover:text-amber-500 transition-colors p-0.5 shrink-0"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openContactDialog(item); }}
-                        className="flex items-center gap-1 text-amber-600 hover:underline font-bold"
-                      >
-                        <Settings2 className="h-3.5 w-3.5" /> Configure
-                      </button>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        <MapPin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        <span className="truncate">{item.location || "Location not provided"}</span>
+                      </div>
                     </div>
+
+                    <div className="flex items-baseline justify-between border-y border-border py-2 text-xs">
+                      <span className="font-display text-lg font-extrabold text-amber-600 dark:text-amber-400">
+                        ₹{Number(item.price || 0).toLocaleString()}
+                      </span>
+                      <div className="text-muted-foreground space-x-2">
+                        {item.bhk && <span>{item.bhk} BHK</span>}
+                        {item.land_size_cents && <span>{item.land_size_cents} cents</span>}
+                      </div>
+                    </div>
+
+                    {/* Owner Contact Box with Direct WhatsApp + Call Buttons */}
+                    <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-xs space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1 font-semibold text-foreground truncate">
+                          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">Owner: {item.owner_name}</span>
+                        </span>
+
+                        {/* Direct Contact Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Call Button */}
+                          {item.owner_phone && (
+                            <a
+                              href={`tel:${item.owner_phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Call Owner Directly"
+                              className="rounded-md border border-border bg-background p-1.5 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-600 transition-colors"
+                            >
+                              <Phone className="h-3 w-3" />
+                            </a>
+                          )}
+
+                          {/* WhatsApp Button */}
+                          {waPhone && (
+                            <a
+                              href={`https://wa.me/${waPhone}?text=${encodeURIComponent(waMessage)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Chat with Owner on WhatsApp"
+                              className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-1.5 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+                            >
+                              <MessageCircle className="h-3 w-3" />
+                            </a>
+                          )}
+
+                          {/* Copy Phone Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyPhone(item.owner_phone, item.id);
+                            }}
+                            title="Copy Phone Number"
+                            className="flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 font-mono text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          >
+                            {copiedPhone === item.id ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                            <span>{item.owner_phone}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Contact Privacy Mode Row */}
+                      <div className="flex items-center justify-between border-t border-border/50 pt-2">
+                        <div className="flex items-center gap-1.5 font-medium">
+                          {item.hide_owner_contact !== false ? (
+                            <span className="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 font-bold">
+                              <EyeOff className="h-3.5 w-3.5" /> Masked: Admin Phone Live
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-muted-foreground">
+                              <Eye className="h-3.5 w-3.5" /> Owner Phone Public
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openContactDialog(item);
+                          }}
+                          className="flex items-center gap-1 text-amber-600 hover:underline font-bold"
+                        >
+                          <Settings2 className="h-3.5 w-3.5" /> Configure
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Admin Notes Preview Banner */}
+                    {item.admin_notes && (
+                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-1.5">
+                        <StickyNote className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">{item.admin_notes}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card Action Buttons Toolbar */}
+                <div className="border-t border-border/40 p-4 pt-3 space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Approve / Pending Toggle */}
+                    {item.status !== "available" ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateStatusMutation.mutate({ id: item.id, newStatus: "available" });
+                        }}
+                        className="flex items-center justify-center gap-1 rounded-lg bg-emerald-600 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateStatusMutation.mutate({ id: item.id, newStatus: "pending" });
+                        }}
+                        className="flex items-center justify-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 py-2 text-xs font-bold text-amber-600 hover:bg-amber-500/20"
+                      >
+                        <Clock className="h-3.5 w-3.5" /> Pending
+                      </button>
+                    )}
+
+                    {/* Reject or Delete */}
+                    {item.status !== "rejected" ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openNotesModal(item, true);
+                        }}
+                        className="flex items-center justify-center gap-1 rounded-lg border border-destructive/40 bg-destructive/10 py-2 text-xs font-bold text-destructive hover:bg-destructive/20"
+                      >
+                        <XCircle className="h-3.5 w-3.5" /> Reject
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteMutation.mutate(item.id);
+                        }}
+                        className="flex items-center justify-center gap-1 rounded-lg border border-border bg-muted py-2 text-xs font-bold text-muted-foreground hover:bg-destructive hover:text-white"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    )}
+
+                    {/* Note Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openNotesModal(item, false);
+                      }}
+                      className={`flex items-center justify-center gap-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
+                        item.admin_notes
+                          ? "border-blue-500/40 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
+                          : "border-border bg-muted text-muted-foreground hover:bg-muted/60"
+                      }`}
+                    >
+                      <StickyNote className="h-3.5 w-3.5" />
+                      {item.admin_notes ? "Note ✓" : "Note"}
+                    </button>
                   </div>
 
-                  {/* Feature 2: Admin notes preview */}
-                  {item.admin_notes && (
-                    <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-1.5">
-                      <StickyNote className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{item.admin_notes}</span>
-                    </div>
-                  )}
+                  {/* Secondary Row: Mark as Sold / Preview */}
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    {item.status !== "sold" ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateStatusMutation.mutate({ id: item.id, newStatus: "sold" });
+                        }}
+                        className="text-[11px] font-semibold text-muted-foreground hover:text-indigo-600 flex items-center gap-1 transition-colors"
+                      >
+                        <CheckCheck className="h-3 w-3" /> Mark as Sold / Closed
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateStatusMutation.mutate({ id: item.id, newStatus: "available" });
+                        }}
+                        className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1 transition-colors"
+                      >
+                        <CheckCircle2 className="h-3 w-3" /> Re-open as Available
+                      </button>
+                    )}
+
+                    <a
+                      href={`/listings?id=${item.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[11px] font-semibold text-amber-600 hover:underline flex items-center gap-1 ml-auto"
+                    >
+                      <span>Public view</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
                 </div>
               </div>
-
-              {/* Action Buttons — 3 columns */}
-              <div className="grid grid-cols-3 gap-2 border-t border-border/40 p-4 pt-3">
-                {item.status !== "available" ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: item.id, newStatus: "available" }); }}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-emerald-600 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Approve
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); updateStatusMutation.mutate({ id: item.id, newStatus: "pending" }); }}
-                    className="flex items-center justify-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 py-2 text-xs font-bold text-amber-600 hover:bg-amber-500/20"
-                  >
-                    <Clock className="h-3.5 w-3.5" /> Pending
-                  </button>
-                )}
-
-                {/* Feature 2: Reject now opens notes modal first */}
-                {item.status !== "rejected" ? (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openNotesModal(item, true); }}
-                    className="flex items-center justify-center gap-1 rounded-lg border border-destructive/40 bg-destructive/10 py-2 text-xs font-bold text-destructive hover:bg-destructive/20"
-                  >
-                    <XCircle className="h-3.5 w-3.5" /> Reject
-                  </button>
-                ) : (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(item.id); }}
-                    className="flex items-center justify-center gap-1 rounded-lg border border-border bg-muted py-2 text-xs font-bold text-muted-foreground hover:bg-destructive hover:text-white"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> Delete
-                  </button>
-                )}
-
-                {/* Feature 2: Note button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); openNotesModal(item, false); }}
-                  className={`flex items-center justify-center gap-1 rounded-lg border py-2 text-xs font-bold transition-colors ${
-                    item.admin_notes
-                      ? "border-blue-500/40 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
-                      : "border-border bg-muted text-muted-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  <StickyNote className="h-3.5 w-3.5" />
-                  {item.admin_notes ? "Note ✓" : "Note"}
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="col-span-full py-16 text-center text-muted-foreground space-y-2">
             <Inbox className="h-10 w-10 text-muted-foreground/40 mx-auto" />
-            <div className="text-base font-semibold">No public property listings found</div>
-            <div className="text-xs">Try selecting a different status filter or clearing your search.</div>
+            <div className="text-base font-semibold">No public property listings match the selected filters</div>
+            <div className="text-xs">Try selecting a different status filter, changing listing type, or clearing your search.</div>
           </div>
         )}
       </div>
 
-      {/* Feature 2: Admin Notes / Rejection Reason Modal */}
+      {/* Image Gallery Lightbox Modal */}
+      <Dialog open={Boolean(galleryListing)} onOpenChange={(open) => !open && setGalleryListing(null)}>
+        <DialogContent className="sm:max-w-3xl p-0 overflow-hidden bg-black/95 text-white border-zinc-800">
+          <div className="relative flex flex-col">
+            {/* Gallery Header */}
+            <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+              <div>
+                <h3 className="font-bold text-sm text-white line-clamp-1">
+                  {galleryListing?.title}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Photo {activeImageIndex + 1} of {galleryListing?.images?.length || 1} • {galleryListing?.location || "Kerala"}
+                </p>
+              </div>
+              <button
+                onClick={() => setGalleryListing(null)}
+                className="rounded-lg p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors text-xs"
+              >
+                Close ✕
+              </button>
+            </div>
+
+            {/* Main Image Stage */}
+            <div className="relative h-[65vh] flex items-center justify-center bg-black/80">
+              {galleryListing?.images?.[activeImageIndex] ? (
+                <img
+                  src={galleryListing.images[activeImageIndex]}
+                  alt={`Listing photo ${activeImageIndex + 1}`}
+                  className="max-h-full max-w-full object-contain select-none"
+                />
+              ) : (
+                <div className="text-zinc-500 text-sm">No image available</div>
+              )}
+
+              {/* Navigation Arrows */}
+              {galleryListing?.images?.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-3 rounded-full bg-black/60 p-2 text-white hover:bg-black/90 transition-colors backdrop-blur-md"
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-3 rounded-full bg-black/60 p-2 text-white hover:bg-black/90 transition-colors backdrop-blur-md"
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Thumbnails Row */}
+            {galleryListing?.images?.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto p-3 bg-zinc-900 border-t border-zinc-800">
+                {galleryListing.images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveImageIndex(idx)}
+                    className={`h-16 w-20 shrink-0 overflow-hidden rounded-md border-2 transition-all ${
+                      activeImageIndex === idx ? "border-amber-500 scale-105" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={img} alt={`Thumb ${idx}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Notes / Rejection Reason Modal */}
       <Dialog open={isNotesModalOpen} onOpenChange={setIsNotesModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -630,8 +996,8 @@ export default function ModerationListingsPage() {
               onChange={(e) => setNotesText(e.target.value)}
               placeholder={
                 pendingRejectId
-                  ? "e.g. Duplicate listing, incomplete details, suspicious price..."
-                  : "e.g. Verified by field agent on 18 Sep..."
+                  ? "e.g. Duplicate listing, invalid phone number, pricing discrepancy..."
+                  : "e.g. Verified by agent via WhatsApp on 18 Sep..."
               }
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
@@ -645,7 +1011,10 @@ export default function ModerationListingsPage() {
 
           <DialogFooter>
             <button
-              onClick={() => { setIsNotesModalOpen(false); setPendingRejectId(null); }}
+              onClick={() => {
+                setIsNotesModalOpen(false);
+                setPendingRejectId(null);
+              }}
               className="rounded-lg border border-border px-4 py-2 text-xs font-semibold hover:bg-muted"
             >
               Cancel

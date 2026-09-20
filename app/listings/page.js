@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "rea
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
+import { Share2, Check } from "lucide-react";
+import { toast } from "sonner";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 const supabase = createClient(
@@ -40,8 +42,68 @@ function fmtINR(n) {
 }
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
+function shareProperty(property, setCopied) {
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const shareUrl = `${baseUrl}/listings?id=${property.id}`;
+  const shareTitle = `${property.title} | PropertyFlow`;
+  const shareText = `Check out this property: ${property.title} - ${fmtINR(property.price)} in ${property.location || "Kerala"}`;
+
+  const copyToClipboard = () => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(shareUrl)
+        .then(() => {
+          if (setCopied) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }
+          toast.success("Property link copied to clipboard!");
+        })
+        .catch(() => {
+          toast.error("Could not copy link to clipboard.");
+        });
+    } else {
+      try {
+        const input = document.createElement("input");
+        input.value = shareUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+        if (setCopied) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
+        toast.success("Property link copied to clipboard!");
+      } catch {
+        toast.error("Could not copy link.");
+      }
+    }
+  };
+
+  if (typeof navigator !== "undefined" && navigator.share) {
+    navigator
+      .share({
+        title: shareTitle,
+        text: shareText,
+        url: shareUrl,
+      })
+      .then(() => {
+        toast.success("Shared successfully!");
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          copyToClipboard();
+        }
+      });
+  } else {
+    copyToClipboard();
+  }
+}
+
 // ── Property Card ─────────────────────────────────────────────────────────────
 function PropertyCard({ property, onClick }) {
+  const [copied, setCopied] = useState(false);
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
   const specs = [
     property.bhk && `${property.bhk} BHK`,
@@ -108,10 +170,23 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
             📷 {property.images.length}
           </div>
         )}
-        {/* Status + owner badge */}
-        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
-          <div className="bg-[#009688] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase">
-            {property.status}
+        {/* Status + owner badge + quick share */}
+        <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                shareProperty(property, setCopied);
+              }}
+              title="Share property"
+              className="bg-black/55 hover:bg-[#009688] text-white p-1.5 rounded-full backdrop-blur-md shadow transition-colors flex items-center justify-center"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Share2 className="w-3.5 h-3.5 text-white" />}
+            </button>
+            <div className="bg-[#009688] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase">
+              {property.status}
+            </div>
           </div>
           {property._source === "owner" && (
             <div className="bg-[#E65100] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide">
@@ -144,8 +219,8 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-[#F0F0F0] pt-3">
+        {/* Divider & Actions */}
+        <div className="border-t border-[#F0F0F0] pt-3 flex items-center justify-between gap-2">
           {waHref ? (
             <a
               href={waHref}
@@ -163,6 +238,28 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
           ) : (
             <span className="text-[13px] text-[#BDBDBD]">Contact via agent</span>
           )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              shareProperty(property, setCopied);
+            }}
+            title="Share property listing"
+            className="flex items-center gap-1.5 text-[12.5px] font-medium text-[#616161] hover:text-[#009688] hover:bg-[#E0F2F1]/60 px-2.5 py-1.5 rounded-lg transition-colors ml-auto"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-[#009688]" />
+                <span className="text-[#009688] font-semibold">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5" />
+                <span>Share</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </article>
@@ -172,6 +269,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
 // ── Property Modal ────────────────────────────────────────────────────────────
 function PropertyModal({ property, onClose }) {
   const [imgIdx, setImgIdx] = useState(0);
+  const [copied, setCopied] = useState(false);
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
 
   const isAgent = property._source === "agent";
@@ -253,10 +351,20 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color.dot }} />
             {cap(property.property_type)}
           </div>
-          <button onClick={onClose}
-            className="absolute top-3 right-3 bg-white/90 text-[#424242] w-8 h-8 rounded-full flex items-center justify-center hover:bg-white shadow transition-colors font-medium">
-            ✕
-          </button>
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => shareProperty(property, setCopied)}
+              title="Share property"
+              className="bg-white/90 text-[#424242] hover:text-[#009688] w-8 h-8 rounded-full flex items-center justify-center hover:bg-white shadow transition-colors"
+            >
+              {copied ? <Check className="w-4 h-4 text-[#009688]" /> : <Share2 className="w-4 h-4" />}
+            </button>
+            <button onClick={onClose}
+              className="bg-white/90 text-[#424242] w-8 h-8 rounded-full flex items-center justify-center hover:bg-white shadow transition-colors font-medium">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Thumbnail strip */}
@@ -311,32 +419,41 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
             </div>
           )}
 
-          {/* Contact */}
-          {(contactName || contactPhone || waHref) && (
-            <div className="border-t border-[#EEEEEE] pt-4">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-[#9E9E9E] mb-3">Listed By</p>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-[#E0F2F1] flex items-center justify-center text-[#009688] font-bold text-[15px]">
-                    {contactName?.[0] || "A"}
-                  </div>
-                  <div>
-                    {contactName && <p className="text-[14px] font-semibold text-[#212121]">{contactName}</p>}
-                    {contactPhone && <p className="text-[13px] text-[#616161]">{contactPhone}</p>}
-                  </div>
+          {/* Contact & Actions */}
+          <div className="border-t border-[#EEEEEE] pt-4">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-[#9E9E9E] mb-3">Listed By &amp; Actions</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-[#E0F2F1] flex items-center justify-center text-[#009688] font-bold text-[15px]">
+                  {contactName?.[0] || "A"}
                 </div>
+                <div>
+                  {contactName && <p className="text-[14px] font-semibold text-[#212121]">{contactName}</p>}
+                  {contactPhone && <p className="text-[13px] text-[#616161]">{contactPhone}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => shareProperty(property, setCopied)}
+                  className="flex items-center gap-1.5 border border-[#E0E0E0] bg-[#F5F5F5] hover:bg-[#E0F2F1] hover:border-[#009688] hover:text-[#009688] text-[#424242] text-[13px] font-semibold px-4 py-2.5 rounded-lg transition-colors"
+                >
+                  {copied ? <Check className="w-4 h-4 text-[#009688]" /> : <Share2 className="w-4 h-4" />}
+                  <span>{copied ? "Link Copied!" : "Share Property"}</span>
+                </button>
                 {waHref && (
                   <a href={waHref} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 bg-[#25D366] text-white text-[13.5px] font-semibold px-5 py-2.5 rounded-lg hover:bg-[#128C7E] transition-colors">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/>
+                      <path d="M12 0C5.374 0 0 5.373 0 12c0 2.12.554 4.107 1.523 5.832L.057 23.854l6.188-1.453A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22.008a9.99 9.99 0 0 1-5.117-1.404l-.366-.218-3.793.893.929-3.68-.24-.378A9.959 9.959 0 0 1 2.004 12C2.004 6.474 6.475 2.004 12 2.004S21.996 6.474 21.996 12C21.996 17.525 17.525 21.996 12 22.008z"/>
                     </svg>
                     WhatsApp
                   </a>
                 )}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
