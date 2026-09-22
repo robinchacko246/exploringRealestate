@@ -1,6 +1,5 @@
 {
+  "/auth/page": "app/auth/page.js",
   "/listings/page": "app/listings/page.js",
-  "/app/admin/analytics/page": "app/app/admin/analytics/page.js",
-  "/app/admin/listings/page": "app/app/admin/listings/page.js",
-  "/app/admin/settings/page": "app/app/admin/settings/page.js"
+  "/app/page": "app/app/page.js"
 }

@@ -42,20 +42,18 @@ function fmtINR(n) {
 }
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
-// Reads the --brand CSS variable injected by the layout (falls back to teal)
+// Fetches brand_color directly from admin_settings (most reliable approach)
 function useBrandColor() {
   const [color, setColor] = useState("#009688");
   useEffect(() => {
-    const v = getComputedStyle(document.documentElement)
-      .getPropertyValue("--brand")
-      .trim();
-    if (v) setColor(v);
-    // Re-check once after a short delay in case the layout CSS var loads slightly later
-    const t = setTimeout(() => {
-      const v2 = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim();
-      if (v2) setColor(v2);
-    }, 300);
-    return () => clearTimeout(t);
+    supabase
+      .from("admin_settings")
+      .select("value")
+      .eq("key", "brand_color")
+      .single()
+      .then(({ data }) => {
+        if (data?.value) setColor(data.value);
+      });
   }, []);
   return color;
 }

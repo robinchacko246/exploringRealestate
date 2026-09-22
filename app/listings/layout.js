@@ -51,9 +51,6 @@ export default function ListingsLayout({ children }) {
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-[#212121]">
 
-      {/* Inject brand color as CSS var for child pages to use if needed */}
-      <style>{`:root { --brand: ${color}; }`}</style>
-
       {/* ── Header ──────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="max-w-[1280px] mx-auto px-4 md:px-8 flex items-center justify-between h-[64px]">
