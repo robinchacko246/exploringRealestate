@@ -597,6 +597,17 @@ function ListingsContent() {
     }
   }, [idParam, properties]);
 
+  // Sync category filter when URL ?type= param changes (e.g. header nav clicks)
+  useEffect(() => {
+    const cat = typeParam && validTypes.includes(typeParam) ? typeParam : "all";
+    setActiveCategory(cat);
+    setHeroType(cat === "all" ? "" : cat);
+    // Scroll to the grid so the user sees filtered results
+    if (typeParam) {
+      setTimeout(() => gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    }
+  }, [typeParam]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filtered = useMemo(() => {
     let list = [...properties];
 
