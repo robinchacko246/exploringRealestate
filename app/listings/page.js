@@ -42,6 +42,24 @@ function fmtINR(n) {
 }
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
+// Reads the --brand CSS variable injected by the layout (falls back to teal)
+function useBrandColor() {
+  const [color, setColor] = useState("#009688");
+  useEffect(() => {
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue("--brand")
+      .trim();
+    if (v) setColor(v);
+    // Re-check once after a short delay in case the layout CSS var loads slightly later
+    const t = setTimeout(() => {
+      const v2 = getComputedStyle(document.documentElement).getPropertyValue("--brand").trim();
+      if (v2) setColor(v2);
+    }, 300);
+    return () => clearTimeout(t);
+  }, []);
+  return color;
+}
+
 function shareProperty(property, setCopied) {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = `${baseUrl}/listings?id=${property.id}`;
@@ -498,6 +516,7 @@ function ListingsContent() {
   const [activeTab,        setActiveTab]         = useState("all"); // 'all' | 'buy' | 'rent'
 
   const gridRef = useRef(null);
+  const brand = useBrandColor();
 
   useEffect(() => {
     async function fetchProps() {
@@ -666,7 +685,7 @@ function ListingsContent() {
               </div>
               <h1 className="font-serif text-4xl md:text-5xl lg:text-[56px] font-semibold leading-[1.08] tracking-tight mb-5">
                 Let&apos;s Find Your<br />
-                <span className="text-[#4DB6AC]">Dream Property</span>
+                <span style={{ color: brand }}>Dream Property</span>
               </h1>
               <p className="text-[15px] text-white/75 leading-relaxed max-w-md mb-8">
                 Welcome to PropertyFlow — Kerala&apos;s trusted real estate platform. Browse thousands of plots, villas, apartments, and commercial spaces listed by verified agents.
@@ -711,7 +730,7 @@ function ListingsContent() {
                     onClick={() => setActiveTab(tab.id)}
                     className="flex-1 py-3.5 text-[14px] font-semibold transition-colors"
                     style={{
-                      backgroundColor: activeTab === tab.id ? "#009688" : "white",
+                      backgroundColor: activeTab === tab.id ? brand : "white",
                       color: activeTab === tab.id ? "white" : "#757575",
                     }}
                   >
@@ -785,7 +804,10 @@ function ListingsContent() {
                 {/* Search button */}
                 <button
                   onClick={handleHeroSearch}
-                  className="w-full flex items-center justify-center gap-2.5 bg-[#009688] hover:bg-[#00796B] text-white text-[15px] font-semibold py-3.5 rounded-lg transition-colors mt-1"
+                  className="w-full flex items-center justify-center gap-2.5 text-white text-[15px] font-semibold py-3.5 rounded-lg transition-colors mt-1"
+                  style={{ backgroundColor: brand }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
                 >
                   <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                     <circle cx="9" cy="9" r="6" stroke="white" strokeWidth="2" />
@@ -809,12 +831,12 @@ function ListingsContent() {
                 onClick={() => handleCategorySelect(cat.id)}
                 className="shrink-0 px-5 py-4 text-[13.5px] font-medium border-b-2 transition-all whitespace-nowrap"
                 style={{
-                  borderBottomColor: activeCategory === cat.id ? "#009688" : "transparent",
-                  color: activeCategory === cat.id ? "#009688" : "#616161",
+                  borderBottomColor: activeCategory === cat.id ? brand : "transparent",
+                  color: activeCategory === cat.id ? brand : "#616161",
                 }}
               >
                 {cat.label}
-                <span className="ml-1.5 text-[11px]" style={{ color: activeCategory === cat.id ? "#00796B" : "#BDBDBD" }}>
+                <span className="ml-1.5 text-[11px]" style={{ color: activeCategory === cat.id ? brand : "#BDBDBD" }}>
                   ({counts[cat.id] ?? 0})
                 </span>
               </button>
@@ -831,9 +853,9 @@ function ListingsContent() {
             <h2 className="text-[18px] font-bold text-[#212121]">
               {activeCategory === "all" ? "All Properties" : CATEGORIES.find(c=>c.id===activeCategory)?.label}
               {!loading && (
-                <span className="ml-2 text-[14px] font-normal text-[#009688]">
-                  ({filtered.length} listings)
-                </span>
+                <span className="ml-2 text-[14px] font-normal" style={{ color: brand }}>
+                    ({filtered.length} listings)
+                  </span>
               )}
             </h2>
           </div>
