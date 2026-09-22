@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -53,8 +53,8 @@ export default function ModerationListingsPage() {
 
   // Contact modal state
   const [hideOwnerContact, setHideOwnerContact] = useState(true);
-  const [adminPhone, setAdminPhone] = useState("+918138802204");
-  const [adminName, setAdminName] = useState("PropertyFlow Desk");
+  const [adminPhone, setAdminPhone] = useState("");
+  const [adminName, setAdminName] = useState("");
 
   // Admin notes / rejection reason state
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
@@ -72,6 +72,29 @@ export default function ModerationListingsPage() {
   // Image Gallery Lightbox state
   const [galleryListing, setGalleryListing] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Fetch global admin settings from DB (replaces hardcoded phone/name)
+  const { data: adminSettings } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("key, value");
+      if (error) return {};
+      const map = {};
+      (data ?? []).forEach((row) => { map[row.key] = row.value; });
+      return map;
+    },
+  });
+
+  // Sync adminPhone / adminName from global settings whenever they load
+  useEffect(() => {
+    if (adminSettings) {
+      if (!adminPhone) setAdminPhone(adminSettings.admin_contact_phone ?? "+918138802204");
+      if (!adminName)  setAdminName(adminSettings.admin_contact_name  ?? "PropertyFlow Desk");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminSettings]);
 
   // Fetch public property listings
   const { data: listings = [], isLoading, refetch } = useQuery({
@@ -201,13 +224,17 @@ export default function ModerationListingsPage() {
     },
   });
 
+  const globalPhone = adminSettings?.admin_contact_phone ?? "+918138802204";
+  const globalName  = adminSettings?.admin_contact_name  ?? "PropertyFlow Desk";
+
   const openContactDialog = (item) => {
     setSelectedListing(item);
     setHideOwnerContact(true);
+    // Use per-listing override if it exists; otherwise fall back to global admin settings
     const phone = item.admin_contact_phone;
-    const phoneToUse = (!phone || phone.includes("7907102204")) ? "+918138802204" : phone;
+    const phoneToUse = (!phone || phone.includes("7907102204")) ? globalPhone : phone;
     setAdminPhone(phoneToUse);
-    setAdminName(item.admin_contact_name || "PropertyFlow Desk");
+    setAdminName(item.admin_contact_name || globalName);
     setIsContactModalOpen(true);
   };
 

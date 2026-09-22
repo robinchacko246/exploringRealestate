@@ -38,7 +38,8 @@ function Input({ ...props }) {
   );
 }
 
-function SuccessCard({ title, listingType, ownerPhone, onReset }) {
+function SuccessCard({ title, listingType, ownerPhone, submittedId, onReset }) {
+  const statusUrl = submittedId ? `/status?id=${submittedId}` : null;
   return (
     <div className="max-w-xl mx-auto text-center py-8 px-6">
       {/* Animated check */}
@@ -53,10 +54,28 @@ function SuccessCard({ title, listingType, ownerPhone, onReset }) {
       <p className="text-[15.5px] text-[#424242] mb-2">
         <strong className="text-[#009688]">{title}</strong> is now listed on PropertyFlow.
       </p>
-      <p className="text-[14px] text-[#757575] mb-8 leading-relaxed">
+      <p className="text-[14px] text-[#757575] mb-6 leading-relaxed">
         Interested {listingType === "rent" ? "renters" : "buyers"} will contact you directly on{" "}
         <strong className="text-[#212121]">{ownerPhone}</strong>. Your listing appears instantly in search results.
       </p>
+
+      {/* Status tracking link */}
+      {statusUrl && (
+        <div className="bg-[#E0F2F1] border border-[#B2DFDB] rounded-xl px-4 py-3.5 mb-6 text-left">
+          <p className="text-[12px] font-semibold uppercase tracking-widest text-[#009688] mb-1">📋 Track Your Listing</p>
+          <p className="text-[13px] text-[#424242] mb-2">
+            Bookmark this link to check your listing status anytime:
+          </p>
+          <a
+            href={statusUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block truncate rounded-lg bg-white border border-[#B2DFDB] px-3 py-2 text-[12.5px] font-mono text-[#009688] hover:underline"
+          >
+            {typeof window !== "undefined" ? `${window.location.origin}${statusUrl}` : statusUrl}
+          </a>
+        </div>
+      )}
 
       <div className="bg-[#F5F7FA] rounded-2xl p-5 mb-8 text-left space-y-3">
         <p className="text-[12px] font-semibold uppercase tracking-widest text-[#9E9E9E]">What happens next</p>
@@ -95,6 +114,7 @@ export default function SellPage() {
   const [step, setStep]               = useState(1); // 1 = property, 2 = contact
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
+  const [submittedId, setSubmittedId] = useState(null); // track listing ID for status page
   const [error, setError]             = useState("");
   const [files, setFiles]             = useState([]);
 
@@ -157,6 +177,21 @@ export default function SellPage() {
       }
     }
 
+    // Fetch global admin contact details from DB (avoids hardcoding)
+    let adminContactPhone = "+918138802204";
+    let adminContactName  = "PropertyFlow Desk";
+    try {
+      const { data: settingsData } = await supabase
+        .from("admin_settings")
+        .select("key, value");
+      if (settingsData) {
+        const settingsMap = {};
+        settingsData.forEach((row) => { settingsMap[row.key] = row.value; });
+        if (settingsMap.admin_contact_phone) adminContactPhone = settingsMap.admin_contact_phone;
+        if (settingsMap.admin_contact_name)  adminContactName  = settingsMap.admin_contact_name;
+      }
+    } catch { /* non-fatal: fall back to defaults */ }
+
     const payload = {
       listing_type:         listingType,
       property_type:        form.property_type,
@@ -172,19 +207,22 @@ export default function SellPage() {
       images:               imageUrls,
       // Always hide owner contact and route to admin by default
       hide_owner_contact:   true,
-      admin_contact_phone:  "+918138802204",
-      admin_contact_name:   "PropertyFlow Desk",
+      admin_contact_phone:  adminContactPhone,
+      admin_contact_name:   adminContactName,
     };
 
-    const { error: err } = await supabase
+    const { data: insertedData, error: err } = await supabase
       .from("public_property_listings")
-      .insert(payload);
+      .insert(payload)
+      .select("id")
+      .single();
 
     if (err) {
       setError("Failed to submit. Please try again. (" + err.message + ")");
       console.error(err);
       setSubmitting(false);
     } else {
+      setSubmittedId(insertedData?.id ?? null);
       // ── Fire n8n webhook via server-side proxy (avoids CORS + hides n8n URL) ─
       fetch("/api/n8n-webhook", {
         method: "POST",
@@ -220,6 +258,7 @@ export default function SellPage() {
 
   const handleReset = () => {
     setSubmitted(false);
+    setSubmittedId(null);
     setStep(1);
     setError("");
     setFiles([]);
@@ -288,6 +327,7 @@ export default function SellPage() {
               title={form.title}
               listingType={listingType}
               ownerPhone={form.owner_phone}
+              submittedId={submittedId}
               onReset={handleReset}
             />
           </div>

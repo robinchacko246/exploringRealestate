@@ -17,6 +17,7 @@ import {
   Sparkles,
   ArrowRight,
   UserPlus,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -243,7 +244,23 @@ export default function AdminDashboard() {
             </div>
             <div>
               <div className="text-sm font-semibold group-hover:text-purple-600">System Analytics</div>
-              <div className="text-xs text-muted-foreground">Platform revenue & growth</div>
+              <div className="text-xs text-muted-foreground">Platform revenue &amp; growth</div>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+        </Link>
+
+        <Link
+          href="/app/admin/settings"
+          className="group flex items-center justify-between rounded-xl border border-border bg-card p-4 hover:border-slate-500/50 hover:bg-slate-500/5 transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-slate-500/15 text-slate-500">
+              <Settings className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold group-hover:text-slate-700 dark:group-hover:text-slate-300">Admin Settings</div>
+              <div className="text-xs text-muted-foreground">Contact phone &amp; branding</div>
             </div>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />

@@ -14,6 +14,7 @@ import {
   UserCheck,
   Inbox,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,12 +42,13 @@ const main = [
 ];
 
 const adminNav = [
-  { title: "Admin Overview", url: "/app/admin", icon: ShieldCheck },
-  { title: "User & Roles", url: "/app/admin/users", icon: UserCheck },
-  { title: "Public Listings", url: "/app/admin/listings", icon: Inbox },
-  { title: "Subscriptions", url: "/app/admin/subscriptions", icon: CreditCard },
-  { title: "All Properties", url: "/app/admin/properties", icon: Building2 },
-  { title: "Analytics", url: "/app/admin/analytics", icon: BarChart3 },
+  { title: "Admin Overview",  url: "/app/admin",               icon: ShieldCheck },
+  { title: "User & Roles",    url: "/app/admin/users",          icon: UserCheck   },
+  { title: "Public Listings", url: "/app/admin/listings",       icon: Inbox       },
+  { title: "Subscriptions",   url: "/app/admin/subscriptions",  icon: CreditCard  },
+  { title: "All Properties",  url: "/app/admin/properties",     icon: Building2   },
+  { title: "Analytics",       url: "/app/admin/analytics",      icon: BarChart3   },
+  { title: "Settings",        url: "/app/admin/settings",       icon: Settings    },
 ];
 
 export function AppSidebar() {
