@@ -122,6 +122,7 @@ function shareProperty(property, setCopied) {
 // ── Property Card ─────────────────────────────────────────────────────────────
 function PropertyCard({ property, onClick }) {
   const [copied, setCopied] = useState(false);
+  const brand = useBrandColor();
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
   const specs = [
     property.bhk && `${property.bhk} BHK`,
@@ -150,7 +151,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
   return (
     <article
       onClick={() => onClick(property)}
-      className="bg-white rounded-xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(0,150,136,0.15)]"
+      className="bg-white rounded-xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-1"
       style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}
     >
       {/* Image */}
@@ -167,10 +168,10 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
         ) : (
           <div className="flex h-full items-center justify-center">
             <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <rect width="48" height="48" rx="8" fill="#E0F2F1" />
-              <path d="M10 24L24 11L38 24" stroke="#009688" strokeWidth="3" strokeLinecap="round" />
-              <rect x="16" y="24" width="16" height="13" rx="2" fill="#009688" opacity="0.6" />
-              <rect x="21" y="29" width="6" height="8" rx="1" fill="#E0F2F1" />
+              <rect width="48" height="48" rx="8" fill={`${brand}22`} />
+              <path d="M10 24L24 11L38 24" stroke={brand} strokeWidth="3" strokeLinecap="round" />
+              <rect x="16" y="24" width="16" height="13" rx="2" fill={brand} opacity="0.6" />
+              <rect x="21" y="29" width="6" height="8" rx="1" fill={`${brand}22`} />
             </svg>
           </div>
         )}
@@ -198,11 +199,17 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
                 shareProperty(property, setCopied);
               }}
               title="Share property"
-              className="bg-black/55 hover:bg-[#009688] text-white p-1.5 rounded-full backdrop-blur-md shadow transition-colors flex items-center justify-center"
+              className="bg-black/55 text-white p-1.5 rounded-full backdrop-blur-md shadow transition-colors flex items-center justify-center"
+              style={{"--hover-bg": brand}}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = brand; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ""; }}
             >
               {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Share2 className="w-3.5 h-3.5 text-white" />}
             </button>
-            <div className="bg-[#009688] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase">
+            <div
+              className="text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wide uppercase"
+              style={{ backgroundColor: brand }}
+            >
               {property.status}
             </div>
           </div>
@@ -216,13 +223,17 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="text-[14.5px] font-semibold text-[#212121] leading-snug line-clamp-2 mb-1.5 group-hover:text-[#009688] transition-colors">
+        <h3
+          className="text-[14.5px] font-semibold text-[#212121] leading-snug line-clamp-2 mb-1.5 transition-colors"
+          onMouseEnter={(e) => { e.currentTarget.style.color = brand; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = ""; }}
+        >
           {property.title}
         </h3>
         {property.location && (
           <p className="flex items-center gap-1.5 text-[12.5px] text-[#757575] mb-3">
             <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
-              <path d="M6 0C3.24 0 1 2.24 1 5c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" fill="#009688"/>
+              <path d="M6 0C3.24 0 1 2.24 1 5c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" fill={brand}/>
               <circle cx="6" cy="5" r="1.5" fill="white"/>
             </svg>
             {property.location}
@@ -232,7 +243,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
         {/* Price + specs */}
         <div className="flex items-end justify-between gap-2 mb-3">
           <div>
-            <p className="text-[20px] font-bold text-[#009688] leading-none">{fmtINR(property.price)}</p>
+            <p className="text-[20px] font-bold leading-none" style={{ color: brand }}>{fmtINR(property.price)}</p>
             {specs && <p className="text-[12px] text-[#9E9E9E] mt-1">{specs}</p>}
           </div>
         </div>
@@ -264,12 +275,14 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
               shareProperty(property, setCopied);
             }}
             title="Share property listing"
-            className="flex items-center gap-1.5 text-[12.5px] font-medium text-[#616161] hover:text-[#009688] hover:bg-[#E0F2F1]/60 px-2.5 py-1.5 rounded-lg transition-colors ml-auto"
+            className="flex items-center gap-1.5 text-[12.5px] font-medium text-[#616161] px-2.5 py-1.5 rounded-lg transition-colors ml-auto"
+            onMouseEnter={(e) => { e.currentTarget.style.color = brand; e.currentTarget.style.backgroundColor = `${brand}15`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = ""; e.currentTarget.style.backgroundColor = ""; }}
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-[#009688]" />
-                <span className="text-[#009688] font-semibold">Copied!</span>
+                <Check className="w-3.5 h-3.5" style={{ color: brand }} />
+                <span style={{ color: brand }} className="font-semibold">Copied!</span>
               </>
             ) : (
               <>
@@ -288,6 +301,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
 function PropertyModal({ property, onClose }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [copied, setCopied] = useState(false);
+  const brand = useBrandColor();
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
 
   const isAgent = property._source === "agent";
@@ -391,7 +405,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
             {property.images.map((img, i) => (
               <button key={i} onClick={() => setImgIdx(i)}
                 className="relative shrink-0 overflow-hidden rounded-lg transition-opacity"
-                style={{ width: 64, height: 48, outline: i === imgIdx ? "2.5px solid #009688" : "1px solid #E0E0E0", opacity: i === imgIdx ? 1 : 0.6 }}>
+              style={{ width: 64, height: 48, outline: i === imgIdx ? `2.5px solid ${brand}` : "1px solid #E0E0E0", opacity: i === imgIdx ? 1 : 0.6 }}>
                 <Image src={img} alt="" fill className="object-cover" unoptimized sizes="64px" />
               </button>
             ))}
@@ -406,7 +420,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
               {property.location && (
                 <p className="flex items-center gap-1.5 text-[12.5px] text-[#757575] mb-1.5">
                   <svg width="10" height="12" viewBox="0 0 12 14" fill="none">
-                    <path d="M6 0C3.24 0 1 2.24 1 5c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" fill="#009688"/>
+                    <path d="M6 0C3.24 0 1 2.24 1 5c0 3.75 5 9 5 9s5-5.25 5-9c0-2.76-2.24-5-5-5z" fill={brand}/>
                     <circle cx="6" cy="5" r="1.5" fill="white"/>
                   </svg>
                   {property.location}
@@ -415,7 +429,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
               <h2 className="text-[20px] font-bold text-[#212121] leading-snug">{property.title}</h2>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-[26px] font-bold text-[#009688] leading-none">{fmtINR(property.price)}</p>
+              <p className="text-[26px] font-bold leading-none" style={{ color: brand }}>{fmtINR(property.price)}</p>
             </div>
           </div>
 
@@ -442,7 +456,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
             <p className="text-[12px] font-semibold uppercase tracking-wider text-[#9E9E9E] mb-3">Listed By &amp; Actions</p>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-[#E0F2F1] flex items-center justify-center text-[#009688] font-bold text-[15px]">
+                <div className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-[15px]" style={{ backgroundColor: `${brand}22`, color: brand }}>
                   {contactName?.[0] || "A"}
                 </div>
                 <div>
