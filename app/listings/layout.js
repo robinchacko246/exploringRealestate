@@ -15,6 +15,16 @@ const DEFAULTS = {
   brand_name:          "PropertyFlow",
   brand_color:         "#009688",
   brand_tagline:       "Kerala's #1 Property Platform",
+  header_link_1_label: "Buy",
+  header_link_1_url:   "/listings",
+  header_link_2_label: "Apartments",
+  header_link_2_url:   "/listings?type=apartment",
+  header_link_3_label: "Villas",
+  header_link_3_url:   "/listings?type=villa",
+  header_link_4_label: "Plots",
+  header_link_4_url:   "/listings?type=plot",
+  header_link_5_label: "Commercial",
+  header_link_5_url:   "/listings?type=commercial",
   footer_copyright:    `© ${new Date().getFullYear()} PropertyFlow CRM. All rights reserved.`,
   footer_tagline:      "Made with ❤ in Kerala",
   footer_link_1_label: "Browse Listings",
@@ -48,6 +58,20 @@ export default function ListingsLayout({ children }) {
     .map((n) => ({ label: cfg[`footer_link_${n}_label`], url: cfg[`footer_link_${n}_url`] }))
     .filter((l) => l.label && l.url);
 
+  const customHeaderLinks = [1, 2, 3, 4, 5, 6]
+    .map((n) => ({ label: cfg[`header_link_${n}_label`], href: cfg[`header_link_${n}_url`] }))
+    .filter((l) => l.label && l.href);
+
+  const headerLinks = customHeaderLinks.length > 0
+    ? customHeaderLinks
+    : [
+        { href: "/listings",                 label: "Buy"        },
+        { href: "/listings?type=apartment",  label: "Apartments" },
+        { href: "/listings?type=villa",      label: "Villas"     },
+        { href: "/listings?type=plot",       label: "Plots"      },
+        { href: "/listings?type=commercial", label: "Commercial" },
+      ];
+
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-[#212121]">
 
@@ -72,15 +96,9 @@ export default function ListingsLayout({ children }) {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-1">
-            {[
-              { href: "/listings",                   label: "Buy"         },
-              { href: "/listings?type=apartment",    label: "Apartments"  },
-              { href: "/listings?type=villa",        label: "Villas"      },
-              { href: "/listings?type=plot",         label: "Plots"       },
-              { href: "/listings?type=commercial",   label: "Commercial"  },
-            ].map(({ href, label }) => (
+            {headerLinks.map(({ href, label }) => (
               <Link
-                key={href}
+                key={href + label}
                 href={href}
                 className="px-4 py-2 text-[14px] font-medium text-[#424242] rounded transition-colors"
                 style={{ ["--hover-color"]: color }}
@@ -131,7 +149,7 @@ export default function ListingsLayout({ children }) {
           </div>
 
           {/* Mobile nav toggle */}
-          <MobileNav />
+          <MobileNav headerLinks={headerLinks} color={color} />
         </div>
       </header>
 

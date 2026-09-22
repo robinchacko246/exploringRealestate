@@ -28,6 +28,7 @@ import { toast } from "sonner";
 const TABS = [
   { id: "contact",       label: "Contact",       icon: Phone      },
   { id: "branding",      label: "Branding",      icon: Palette    },
+  { id: "header_nav",    label: "Header Nav",    icon: Link2      },
   { id: "footer",        label: "Footer",        icon: Link2      },
   { id: "listings",      label: "Listings",      icon: Building2  },
   { id: "notifications", label: "Notifications", icon: Bell       },
@@ -41,6 +42,18 @@ const DEFAULTS = {
   brand_color:              "#009688",
   brand_email:              "hello@propertyflow.in",
   brand_whatsapp:           "+918138802204",
+  header_link_1_label:      "Buy",
+  header_link_1_url:        "/listings",
+  header_link_2_label:      "Apartments",
+  header_link_2_url:        "/listings?type=apartment",
+  header_link_3_label:      "Villas",
+  header_link_3_url:        "/listings?type=villa",
+  header_link_4_label:      "Plots",
+  header_link_4_url:        "/listings?type=plot",
+  header_link_5_label:      "Commercial",
+  header_link_5_url:        "/listings?type=commercial",
+  header_link_6_label:      "",
+  header_link_6_url:        "",
   footer_copyright:         "© 2026 PropertyFlow CRM. All rights reserved.",
   footer_tagline:           "Made with ❤ in Kerala · Built for Indian realtors",
   footer_link_1_label:      "Browse Listings",
@@ -163,7 +176,7 @@ export default function AdminSettingsPage() {
   // All settings in one flat state object, initialised with defaults
   const [s, setS] = useState(DEFAULTS);
   const [dirty, setDirty] = useState({
-    contact: false, branding: false, footer: false,
+    contact: false, branding: false, header_nav: false, footer: false,
     listings: false, notifications: false,
   });
 
@@ -185,7 +198,7 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (dbSettings) {
       setS((prev) => ({ ...prev, ...dbSettings }));
-      setDirty({ contact: false, branding: false, footer: false, listings: false, notifications: false });
+      setDirty({ contact: false, branding: false, header_nav: false, footer: false, listings: false, notifications: false });
     }
   }, [dbSettings]);
 
@@ -229,6 +242,23 @@ export default function AdminSettingsPage() {
       toast.success("Branding settings saved!");
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
       setDirty((d) => ({ ...d, branding: false }));
+    },
+    onError: (err) => toast.error(`Failed to save: ${err.message}`),
+  });
+
+  const headerNavMut = useMutation({
+    mutationFn: () => upsertKeys([
+      "header_link_1_label", "header_link_1_url",
+      "header_link_2_label", "header_link_2_url",
+      "header_link_3_label", "header_link_3_url",
+      "header_link_4_label", "header_link_4_url",
+      "header_link_5_label", "header_link_5_url",
+      "header_link_6_label", "header_link_6_url",
+    ]),
+    onSuccess: () => {
+      toast.success("Header Navigation settings saved!");
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      setDirty((d) => ({ ...d, header_nav: false }));
     },
     onError: (err) => toast.error(`Failed to save: ${err.message}`),
   });
@@ -470,6 +500,62 @@ export default function AdminSettingsPage() {
           </div>
 
           <SaveBar dirty={dirty.branding} isPending={brandingMut.isPending} onSave={() => brandingMut.mutate()} />
+        </SectionCard>
+      )}
+
+      {/* ── HEADER NAV TAB ─────────────────────────────────────────────────── */}
+      {activeTab === "header_nav" && (
+        <SectionCard>
+          <SectionTitle icon={Link2}>Header Navigation Links</SectionTitle>
+
+          <p className="text-xs text-muted-foreground">
+            Customize the main navigation menu links displayed in the top header on public pages.
+          </p>
+
+          <div className="space-y-4 pt-2">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div key={n} className="grid grid-cols-2 gap-3 p-3 rounded-xl border border-border bg-muted/20">
+                <Field label={`Nav Item ${n} Label`}>
+                  <TextInput
+                    type="text"
+                    value={s[`header_link_${n}_label`]}
+                    onChange={(e) => update(`header_link_${n}_label`, e.target.value, "header_nav")}
+                    placeholder={["Buy", "Apartments", "Villas", "Plots", "Commercial", "Houses"][n-1] || "Label"}
+                  />
+                </Field>
+                <Field label={`Nav Item ${n} URL`}>
+                  <TextInput
+                    icon={ExternalLink}
+                    type="text"
+                    value={s[`header_link_${n}_url`]}
+                    onChange={(e) => update(`header_link_${n}_url`, e.target.value, "header_nav")}
+                    placeholder={["/listings", "/listings?type=apartment", "/listings?type=villa", "/listings?type=plot", "/listings?type=commercial", "/listings?type=house"][n-1] || "/listings"}
+                  />
+                </Field>
+              </div>
+            ))}
+          </div>
+
+          {/* Header Preview */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-border">
+              <span className="text-sm font-bold" style={{ color: s.brand_color || "#009688" }}>
+                {s.brand_name || "PropertyFlow"}
+              </span>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5, 6].map((n) =>
+                  s[`header_link_${n}_label`] ? (
+                    <span key={n} className="text-xs font-medium px-2 py-1 rounded text-[#424242]">
+                      {s[`header_link_${n}_label`]}
+                    </span>
+                  ) : null
+                )}
+              </div>
+            </div>
+            <div className="px-4 py-2 bg-muted/20 text-xs text-muted-foreground">↑ Header navigation preview</div>
+          </div>
+
+          <SaveBar dirty={dirty.header_nav} isPending={headerNavMut.isPending} onSave={() => headerNavMut.mutate()} />
         </SectionCard>
       )}
 
