@@ -1,8 +1,71 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+);
+
+const DEFAULTS = {
+  brand_name:    "PropertyFlow",
+  brand_color:   "#009688",
+  brand_tagline: "Realtor CRM",
+};
 
 export default function AgentsCRMLandingPage() {
+  const [s, setS] = useState(() => mergeWithCache(DEFAULTS));
+
+  useEffect(() => {
+    supabase
+      .from("admin_settings")
+      .select("key, value")
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        data.forEach((r) => { map[r.key] = r.value; });
+        setCachedSettings(map);
+        setS((prev) => ({ ...prev, ...map }));
+      });
+  }, []);
+
+  const brandName   = s.brand_name || "PropertyFlow";
+  const color       = s.brand_color || "#009688";
+  const colorLight  = `${color}15`;
+  const colorBorder = `${color}35`;
+
   return (
     <>
+      {/* ── STICKY SUB-NAV BAR ────────────────────────────────────────── */}
+      <div className="sticky top-[64px] z-40 bg-white/95 backdrop-blur-md border-b border-[#EEEEEE] py-2.5 px-4 md:px-8 shadow-xs">
+        <div className="max-w-[1280px] mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-1 sm:gap-2 text-[13px] font-medium text-[#616161]">
+            <span className="font-bold text-[12px] uppercase tracking-wider text-[#9E9E9E] hidden sm:inline mr-1">
+              {brandName} CRM:
+            </span>
+            <a href="#how" className="px-3 py-1 rounded-full hover:bg-[#F5F5F5] transition-colors">
+              How It Works
+            </a>
+            <a href="#features" className="px-3 py-1 rounded-full hover:bg-[#F5F5F5] transition-colors">
+              Features
+            </a>
+            <a href="#pricing" className="px-3 py-1 rounded-full hover:bg-[#F5F5F5] transition-colors">
+              Pricing
+            </a>
+          </div>
+          <Link
+            href="/auth"
+            className="text-[13px] font-semibold px-4 py-1.5 rounded-lg text-white transition-opacity hover:opacity-90 shadow-sm"
+            style={{ backgroundColor: color }}
+          >
+            Try Free →
+          </Link>
+        </div>
+      </div>
+
       {/* ── HERO ─────────────────────────────────────────────────────── */}
       <section className="relative" style={{ minHeight: "65vh" }}>
         {/* Hero background */}
@@ -10,12 +73,12 @@ export default function AgentsCRMLandingPage() {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: "url('/crm-hero-bg.png')" }}
         />
-        {/* Gradient overlay — teal-tinted for CRM page */}
+        {/* Gradient overlay */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(to right, rgba(0,60,55,0.88) 0%, rgba(0,80,72,0.70) 50%, rgba(0,100,90,0.30) 100%)",
+              "linear-gradient(to right, rgba(10,25,30,0.92) 0%, rgba(15,35,40,0.78) 50%, rgba(20,45,50,0.40) 100%)",
           }}
         />
 
@@ -24,18 +87,21 @@ export default function AgentsCRMLandingPage() {
 
             {/* Left: headline */}
             <div className="text-white">
-              <div className="inline-flex items-center gap-2 bg-[#009688]/30 border border-[#4DB6AC]/40 rounded-full px-4 py-1.5 text-[12.5px] font-semibold text-[#80CBC4] mb-5 tracking-wide">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#4DB6AC] animate-pulse" />
-                REALTOR CRM · INDIA
+              <div
+                className="inline-flex items-center gap-2 border rounded-full px-4 py-1.5 text-[12.5px] font-semibold mb-5 tracking-wide backdrop-blur-md"
+                style={{ backgroundColor: colorLight, borderColor: colorBorder, color: "#80CBC4" }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+                REALTOR CRM · {brandName.toUpperCase()}
               </div>
 
               <h1 className="font-serif text-4xl md:text-5xl lg:text-[58px] font-semibold leading-[1.08] tracking-tight mb-5">
                 Stop Losing Deals<br />
-                <span className="text-[#4DB6AC]">in WhatsApp.</span>
+                <span style={{ color }}>in WhatsApp.</span>
               </h1>
 
-              <p className="text-[15.5px] text-white/75 leading-relaxed max-w-md mb-8">
-                PropertyFlow captures your clients, requirements, and follow-ups from WhatsApp — automatically. Built for Indian real estate agents who close deals, not manage spreadsheets.
+              <p className="text-[15.5px] text-white/80 leading-relaxed max-w-md mb-8">
+                {brandName} captures your clients, requirements, and follow-ups from WhatsApp — automatically. Built for real estate agents who close deals, not manage spreadsheets.
               </p>
 
               {/* Key benefits */}
@@ -45,8 +111,13 @@ export default function AgentsCRMLandingPage() {
                   "Never forget a follow-up with smart reminders",
                   "Match buyers to listings in seconds",
                 ].map((b) => (
-                  <div key={b} className="flex items-center gap-3 text-[14px] text-white/85">
-                    <span className="w-5 h-5 rounded-full bg-[#009688] flex items-center justify-center text-white text-[11px] font-bold shrink-0">✓</span>
+                  <div key={b} className="flex items-center gap-3 text-[14px] text-white/90">
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0"
+                      style={{ backgroundColor: color }}
+                    >
+                      ✓
+                    </span>
                     {b}
                   </div>
                 ))}
@@ -55,7 +126,8 @@ export default function AgentsCRMLandingPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <Link
                   href="/auth"
-                  className="bg-[#009688] hover:bg-[#00796B] text-white text-[15px] font-semibold px-7 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
+                  className="text-white text-[15px] font-semibold px-7 py-3.5 rounded-lg transition-opacity hover:opacity-90 inline-flex items-center gap-2 shadow-lg"
+                  style={{ backgroundColor: color }}
                 >
                   Start Free — 14 Days
                   <span>→</span>
@@ -75,10 +147,10 @@ export default function AgentsCRMLandingPage() {
 
             {/* Right: CRM inbox preview */}
             <div className="hidden md:block">
-              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-white/10">
                 {/* Mock header */}
-                <div className="bg-[#009688] px-4 py-3 flex items-center justify-between">
-                  <span className="text-white text-[13px] font-semibold">Client Inbox</span>
+                <div className="px-4 py-3 flex items-center justify-between text-white" style={{ backgroundColor: color }}>
+                  <span className="text-[13px] font-semibold">Client Inbox</span>
                   <span className="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">4 new</span>
                 </div>
 
@@ -91,11 +163,14 @@ export default function AgentsCRMLandingPage() {
                 ].map((c, i) => (
                   <div
                     key={i}
-                    className={`flex items-center gap-3 px-4 py-3.5 border-b border-[#F0F0F0] ${i === 0 ? "bg-[#E0F2F1]/30" : "bg-white"}`}
+                    className={`flex items-center gap-3 px-4 py-3.5 border-b border-[#F0F0F0] ${i === 0 ? "bg-[#FAFAFA]" : "bg-white"}`}
                   >
                     <div
                       className="h-9 w-9 rounded-full flex items-center justify-center text-[12px] font-bold shrink-0"
-                      style={{ backgroundColor: i === 0 ? "#009688" : "#E0F2F1", color: i === 0 ? "white" : "#009688" }}
+                      style={{
+                        backgroundColor: i === 0 ? color : colorLight,
+                        color: i === 0 ? "white" : color,
+                      }}
                     >
                       {c.initials}
                     </div>
@@ -113,7 +188,10 @@ export default function AgentsCRMLandingPage() {
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className="text-[11px] text-[#BDBDBD]">{c.time}</span>
                       {c.unread > 0 && (
-                        <span className="h-4 w-4 rounded-full bg-[#009688] text-white text-[10px] font-bold flex items-center justify-center">
+                        <span
+                          className="h-4 w-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
+                          style={{ backgroundColor: color }}
+                        >
                           {c.unread}
                         </span>
                       )}
@@ -122,18 +200,20 @@ export default function AgentsCRMLandingPage() {
                 ))}
 
                 {/* AI extracted card */}
-                <div className="p-4 bg-[#F5FFFE]">
+                <div className="p-4" style={{ backgroundColor: colorLight }}>
                   <div className="flex items-center gap-2 mb-2.5">
-                    <div className="w-4 h-4 rounded-full bg-[#009688] flex items-center justify-center">
-                      <span className="text-white text-[9px] font-bold">AI</span>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: color }}>
+                      <span className="text-[9px] font-bold">AI</span>
                     </div>
-                    <p className="text-[11px] font-semibold text-[#009688] uppercase tracking-wider">AI Extracted · Rajesh Kumar</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color }}>
+                      AI Extracted · Rajesh Kumar
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {[["Location", "Kakkanad"], ["Budget", "₹45 L"], ["Land", "10 cents"], ["Type", "Plot"]].map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between border border-[#E0F2F1] rounded-lg px-2.5 py-1.5 bg-white">
+                      <div key={k} className="flex items-center justify-between border rounded-lg px-2.5 py-1.5 bg-white" style={{ borderColor: colorBorder }}>
                         <span className="text-[11px] text-[#9E9E9E]">{k}</span>
-                        <span className="text-[12px] font-semibold text-[#009688]">{v}</span>
+                        <span className="text-[12px] font-semibold" style={{ color }}>{v}</span>
                       </div>
                     ))}
                   </div>
@@ -145,7 +225,7 @@ export default function AgentsCRMLandingPage() {
       </section>
 
       {/* ── STATS STRIP ─────────────────────────────────────────────── */}
-      <div className="bg-[#009688]">
+      <div style={{ backgroundColor: color }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-8 py-7">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-white text-center">
             {[
@@ -156,22 +236,25 @@ export default function AgentsCRMLandingPage() {
             ].map(([num, label]) => (
               <div key={label}>
                 <p className="text-[28px] md:text-[32px] font-bold leading-none mb-1">{num}</p>
-                <p className="text-[12.5px] text-white/70">{label}</p>
+                <p className="text-[12.5px] text-white/75">{label}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── WHY PROPERTYFLOW ────────────────────────────────────────── */}
+      {/* ── WHY BRAND ───────────────────────────────────────────────── */}
       <section className="bg-[#F5F7FA] py-16 md:py-20">
         <div className="max-w-[1280px] mx-auto px-6 md:px-8">
           <div className="text-center mb-12">
-            <span className="inline-block bg-[#E0F2F1] text-[#009688] text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4">
-              Why PropertyFlow
+            <span
+              className="inline-block text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+              style={{ backgroundColor: colorLight, color }}
+            >
+              Why {brandName}
             </span>
             <h2 className="font-serif text-3xl md:text-4xl text-[#212121] tracking-tight">
-              Built for the way Indian agents work
+              Built for the way real estate agents work
             </h2>
           </div>
 
@@ -187,7 +270,7 @@ export default function AgentsCRMLandingPage() {
                 color: "#25D366",
                 bg: "#E8F5E9",
                 title: "WhatsApp Native",
-                desc: "Your clients are already on WhatsApp. PropertyFlow works right where your business lives — no new apps to learn.",
+                desc: `Your clients are already on WhatsApp. ${brandName} works right where your business lives — no new apps to learn.`,
               },
               {
                 icon: (
@@ -219,7 +302,7 @@ export default function AgentsCRMLandingPage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl p-6 shadow-xs hover:shadow-md transition-shadow"
               >
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
@@ -236,10 +319,13 @@ export default function AgentsCRMLandingPage() {
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────────────────── */}
-      <section id="features" className="py-16 md:py-20 bg-white">
+      <section id="features" className="py-16 md:py-20 bg-white scroll-mt-20">
         <div className="max-w-[1280px] mx-auto px-6 md:px-8">
           <div className="text-center mb-12">
-            <span className="inline-block bg-[#E0F2F1] text-[#009688] text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4">
+            <span
+              className="inline-block text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+              style={{ backgroundColor: colorLight, color }}
+            >
               All Features
             </span>
             <h2 className="font-serif text-3xl md:text-4xl text-[#212121] tracking-tight">
@@ -250,10 +336,10 @@ export default function AgentsCRMLandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               {
-                color: "#009688", bg: "#E0F2F1",
+                color: color, bg: colorLight,
                 emoji: "💬",
                 title: "WhatsApp Inbox",
-                desc: "All client conversations in one organized view. No more scrolling through threads.",
+                desc: "All client conversations in one organized view. No more scrolling through endless chat threads.",
               },
               {
                 color: "#1565C0", bg: "#E3F2FD",
@@ -271,7 +357,7 @@ export default function AgentsCRMLandingPage() {
                 color: "#E65100", bg: "#FFF8E1",
                 emoji: "🏠",
                 title: "Property Matching",
-                desc: "AI surfaces the 3 best-fit listings for every buyer. Share the right properties, fast.",
+                desc: "AI surfaces the best-fit listings for every buyer. Share the right properties, fast.",
               },
               {
                 color: "#1B5E20", bg: "#E8F5E9",
@@ -288,7 +374,7 @@ export default function AgentsCRMLandingPage() {
             ].map((f) => (
               <div
                 key={f.title}
-                className="group border border-[#EEEEEE] bg-white rounded-xl p-5 hover:border-[#009688]/30 hover:shadow-[0_4px_20px_rgba(0,150,136,0.1)] transition-all"
+                className="group border border-[#EEEEEE] bg-white rounded-xl p-5 hover:shadow-md transition-all"
               >
                 <div
                   className="w-11 h-11 rounded-xl flex items-center justify-center text-[22px] mb-4"
@@ -296,7 +382,9 @@ export default function AgentsCRMLandingPage() {
                 >
                   {f.emoji}
                 </div>
-                <h3 className="text-[15px] font-bold text-[#212121] mb-1.5 group-hover:text-[#009688] transition-colors">
+                <h3
+                  className="text-[15px] font-bold text-[#212121] mb-1.5 transition-colors"
+                >
                   {f.title}
                 </h3>
                 <p className="text-[13.5px] text-[#757575] leading-relaxed">{f.desc}</p>
@@ -307,10 +395,13 @@ export default function AgentsCRMLandingPage() {
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────────────────── */}
-      <section id="how" className="py-16 md:py-20 bg-[#F5F7FA]">
+      <section id="how" className="py-16 md:py-20 bg-[#F5F7FA] scroll-mt-20">
         <div className="max-w-[1280px] mx-auto px-6 md:px-8">
           <div className="text-center mb-12">
-            <span className="inline-block bg-[#E0F2F1] text-[#009688] text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4">
+            <span
+              className="inline-block text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+              style={{ backgroundColor: colorLight, color }}
+            >
               Simple Process
             </span>
             <h2 className="font-serif text-3xl md:text-4xl text-[#212121] tracking-tight">
@@ -320,7 +411,7 @@ export default function AgentsCRMLandingPage() {
 
           <div className="grid md:grid-cols-4 gap-6 relative">
             {/* Connector line on desktop */}
-            <div className="hidden md:block absolute top-8 left-[15%] right-[15%] h-0.5 bg-[#E0F2F1] z-0" />
+            <div className="hidden md:block absolute top-8 left-[15%] right-[15%] h-0.5 bg-[#E0E0E0] z-0" />
 
             {[
               { n: "01", icon: "📱", title: "Client Pings You",      desc: "A buyer messages you on WhatsApp about a property." },
@@ -331,11 +422,14 @@ export default function AgentsCRMLandingPage() {
               <div key={step.n} className="relative z-10 text-center">
                 <div
                   className="w-16 h-16 rounded-full flex items-center justify-center text-[28px] mx-auto mb-4 shadow-sm"
-                  style={{ backgroundColor: i === 0 ? "#009688" : "white", border: "3px solid #E0F2F1" }}
+                  style={{
+                    backgroundColor: i === 0 ? color : "white",
+                    border: `3px solid ${colorBorder}`,
+                  }}
                 >
                   <span>{step.icon}</span>
                 </div>
-                <p className="text-[12px] font-bold text-[#009688] uppercase tracking-widest mb-1">{step.n}</p>
+                <p className="text-[12px] font-bold uppercase tracking-widest mb-1" style={{ color }}>{step.n}</p>
                 <h3 className="text-[15px] font-bold text-[#212121] mb-2">{step.title}</h3>
                 <p className="text-[13px] text-[#757575] leading-relaxed">{step.desc}</p>
               </div>
@@ -345,21 +439,24 @@ export default function AgentsCRMLandingPage() {
       </section>
 
       {/* ── PRICING ──────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-16 md:py-20 bg-white">
+      <section id="pricing" className="py-16 md:py-20 bg-white scroll-mt-20">
         <div className="max-w-[1280px] mx-auto px-6 md:px-8">
           <div className="text-center mb-12">
-            <span className="inline-block bg-[#E0F2F1] text-[#009688] text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4">
+            <span
+              className="inline-block text-[11px] font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+              style={{ backgroundColor: colorLight, color }}
+            >
               Pricing
             </span>
             <h2 className="font-serif text-3xl md:text-4xl text-[#212121] tracking-tight">
-              Simple plans. India-ready prices.
+              Simple plans. Transparent pricing.
             </h2>
             <p className="text-[15px] text-[#757575] mt-3">No hidden fees. Cancel anytime.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* Free plan */}
-            <div className="border-2 border-[#EEEEEE] rounded-2xl p-7 hover:border-[#009688]/30 transition-colors">
+            <div className="border-2 border-[#EEEEEE] rounded-2xl p-7 hover:border-gray-300 transition-colors">
               <div className="mb-5">
                 <p className="text-[12px] font-semibold uppercase tracking-widest text-[#9E9E9E] mb-1">Starter Realtor</p>
                 <div className="flex items-baseline gap-1">
@@ -377,29 +474,46 @@ export default function AgentsCRMLandingPage() {
                   "WhatsApp Contact Links",
                 ].map((f) => (
                   <li key={f} className="flex items-center gap-3 text-[13.5px] text-[#424242]">
-                    <span className="w-5 h-5 rounded-full bg-[#E0F2F1] text-[#009688] flex items-center justify-center text-[11px] font-bold shrink-0">✓</span>
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                      style={{ backgroundColor: colorLight, color }}
+                    >
+                      ✓
+                    </span>
                     {f}
                   </li>
                 ))}
               </ul>
               <Link
                 href="/auth"
-                className="block text-center border-2 border-[#009688] text-[#009688] text-[14px] font-semibold py-3 rounded-xl hover:bg-[#009688] hover:text-white transition-colors"
+                className="block text-center border-2 text-[14px] font-semibold py-3 rounded-xl transition-colors hover:text-white"
+                style={{ borderColor: color, color }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = color; e.currentTarget.style.color = "white"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = color; }}
               >
                 Get Started Free
               </Link>
             </div>
 
             {/* Pro plan */}
-            <div className="border-2 border-[#009688] rounded-2xl p-7 relative shadow-[0_8px_32px_rgba(0,150,136,0.15)]">
+            <div
+              className="border-2 rounded-2xl p-7 relative"
+              style={{
+                borderColor: color,
+                boxShadow: `0 8px 32px ${color}22`,
+              }}
+            >
               {/* Most popular badge */}
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="bg-[#009688] text-white text-[11px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full">
+                <span
+                  className="text-white text-[11px] font-bold uppercase tracking-widest px-4 py-1.5 rounded-full shadow-sm"
+                  style={{ backgroundColor: color }}
+                >
                   Most Popular
                 </span>
               </div>
               <div className="mb-5 mt-2">
-                <p className="text-[12px] font-semibold uppercase tracking-widest text-[#009688] mb-1">Pro Realtor</p>
+                <p className="text-[12px] font-semibold uppercase tracking-widest mb-1" style={{ color }}>Pro Realtor</p>
                 <div className="flex items-baseline gap-1">
                   <span className="text-[40px] font-bold text-[#212121] leading-none">₹499</span>
                   <span className="text-[14px] text-[#9E9E9E]">/ month</span>
@@ -416,14 +530,20 @@ export default function AgentsCRMLandingPage() {
                   "Advanced Analytics Dashboard",
                 ].map((f) => (
                   <li key={f} className="flex items-center gap-3 text-[13.5px] text-[#424242]">
-                    <span className="w-5 h-5 rounded-full bg-[#009688] text-white flex items-center justify-center text-[11px] font-bold shrink-0">✓</span>
+                    <span
+                      className="w-5 h-5 rounded-full text-white flex items-center justify-center text-[11px] font-bold shrink-0"
+                      style={{ backgroundColor: color }}
+                    >
+                      ✓
+                    </span>
                     {f}
                   </li>
                 ))}
               </ul>
               <Link
                 href="/auth"
-                className="block text-center bg-[#009688] text-white text-[14px] font-semibold py-3 rounded-xl hover:bg-[#00796B] transition-colors"
+                className="block text-center text-white text-[14px] font-semibold py-3 rounded-xl transition-opacity hover:opacity-90 shadow-sm"
+                style={{ backgroundColor: color }}
               >
                 Upgrade to Pro →
               </Link>
@@ -436,14 +556,14 @@ export default function AgentsCRMLandingPage() {
       <div className="bg-[#F5F7FA] border-t border-[#EEEEEE] py-10">
         <div className="max-w-[1280px] mx-auto px-6 md:px-8">
           <p className="text-center text-[13px] font-semibold uppercase tracking-widest text-[#9E9E9E] mb-8">
-            Trusted by real estate professionals across Kerala
+            Trusted by real estate professionals
           </p>
           <div className="grid md:grid-cols-3 gap-5">
             {[
               {
                 name: "Rajan K.",
                 role: "Senior Broker, Ernakulam",
-                quote: "PropertyFlow changed how I work. I used to lose leads in WhatsApp every week. Now every client is tracked and I get reminded exactly when to follow up.",
+                quote: `${brandName} changed how I work. I used to lose leads in WhatsApp every week. Now every client is tracked and I get reminded exactly when to follow up.`,
               },
               {
                 name: "Priya S.",
@@ -456,7 +576,7 @@ export default function AgentsCRMLandingPage() {
                 quote: "Simple, fast, and actually works. I recommended it to 5 other agents in my office. Everyone switched within a month.",
               },
             ].map((t) => (
-              <div key={t.name} className="bg-white rounded-xl p-5 shadow-sm border border-[#EEEEEE]">
+              <div key={t.name} className="bg-white rounded-xl p-5 shadow-xs border border-[#EEEEEE]">
                 <div className="flex items-center gap-1 mb-3">
                   {[...Array(5)].map((_, i) => (
                     <svg key={i} width="14" height="14" viewBox="0 0 20 20" fill="#FFA000">
@@ -466,7 +586,10 @@ export default function AgentsCRMLandingPage() {
                 </div>
                 <p className="text-[13.5px] text-[#616161] leading-relaxed mb-4 italic">&ldquo;{t.quote}&rdquo;</p>
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#E0F2F1] flex items-center justify-center text-[#009688] font-bold text-[12px]">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[12px]"
+                    style={{ backgroundColor: colorLight, color }}
+                  >
                     {t.name[0]}
                   </div>
                   <div>
@@ -481,20 +604,21 @@ export default function AgentsCRMLandingPage() {
       </div>
 
       {/* ── CTA SECTION ──────────────────────────────────────────────── */}
-      <div className="bg-[#009688]">
+      <div style={{ backgroundColor: color }}>
         <div className="max-w-[1280px] mx-auto px-6 md:px-8 py-14 flex flex-col md:flex-row items-center justify-between gap-7">
           <div className="text-white text-center md:text-left">
             <h3 className="font-serif text-2xl md:text-3xl font-semibold mb-2">
               Stop losing leads in WhatsApp chaos.
             </h3>
-            <p className="text-[15px] text-white/75">
-              Join 3,200+ Indian agents who close faster with PropertyFlow.
+            <p className="text-[15px] text-white/80">
+              Join real estate professionals who close faster with {brandName}.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
             <Link
               href="/auth"
-              className="bg-white text-[#009688] text-[14px] font-bold px-7 py-3.5 rounded-xl hover:bg-[#E0F2F1] transition-colors whitespace-nowrap"
+              className="bg-white text-[14px] font-bold px-7 py-3.5 rounded-xl hover:bg-white/90 transition-colors whitespace-nowrap shadow-sm"
+              style={{ color }}
             >
               Start Free — 14 Days →
             </Link>

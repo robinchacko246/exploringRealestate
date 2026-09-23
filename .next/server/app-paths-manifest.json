@@ -1,4 +1,6 @@
 {
-  "/page": "app/page.js",
-  "/listings/page": "app/listings/page.js"
+  "/listings/page": "app/listings/page.js",
+  "/(public)/testimonials/page": "app/(public)/testimonials/page.js",
+  "/(public)/faq/page": "app/(public)/faq/page.js",
+  "/agentscrm/page": "app/agentscrm/page.js"
 }
