@@ -46,14 +46,17 @@ If you have any questions or concerns about this Privacy Policy, please contact 
 We may update this Privacy Policy from time to time. We will notify you of any significant changes by posting the new policy on this page with an updated date.`,
 };
 
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
+
 export default function PrivacyPage() {
-  const [s, setS] = useState(DEFAULTS);
+  const [s, setS] = useState(() => mergeWithCache(DEFAULTS));
 
   useEffect(() => {
     supabase.from("admin_settings").select("key, value").then(({ data }) => {
       if (!data) return;
       const map = {};
       data.forEach((r) => { map[r.key] = r.value; });
+      setCachedSettings(map);
       setS((prev) => ({ ...prev, ...map }));
     });
   }, []);

@@ -22,8 +22,10 @@ const DEFAULTS = {
   page_contact_map_url:     "",
 };
 
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
+
 export default function ContactPage() {
-  const [s, setS]         = useState(DEFAULTS);
+  const [s, setS]         = useState(() => mergeWithCache(DEFAULTS));
   const [form, setForm]   = useState({ name: "", email: "", phone: "", message: "" });
   const [status, setStatus] = useState("idle"); // idle | sending | sent | error
 
@@ -32,6 +34,7 @@ export default function ContactPage() {
       if (!data) return;
       const map = {};
       data.forEach((r) => { map[r.key] = r.value; });
+      setCachedSettings(map);
       setS((prev) => ({ ...prev, ...map }));
     });
   }, []);

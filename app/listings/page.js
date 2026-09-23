@@ -6,6 +6,7 @@ import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 import { Share2, Check } from "lucide-react";
 import { toast } from "sonner";
+import { getCachedSettings, setCachedSettings } from "@/lib/brand-cache";
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 const supabase = createClient(
@@ -42,26 +43,49 @@ function fmtINR(n) {
 }
 function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""; }
 
-// Fetches brand_color directly from admin_settings (most reliable approach)
-function useBrandColor() {
-  const [color, setColor] = useState("#009688");
+// Synchronously initializes from brand cache — zero flash of default values
+function useBrandSettings() {
+  const [settings, setSettings] = useState(() => {
+    const cached = getCachedSettings();
+    return {
+      brand_color:         cached?.brand_color         || "#009688",
+      brand_name:          cached?.brand_name          || "PropertyFlow",
+      brand_tagline:       cached?.brand_tagline       || "Kerala's trusted real estate platform",
+      admin_contact_name:  cached?.admin_contact_name  || "Support Desk",
+    };
+  });
+
   useEffect(() => {
     supabase
       .from("admin_settings")
-      .select("value")
-      .eq("key", "brand_color")
-      .single()
+      .select("key, value")
       .then(({ data }) => {
-        if (data?.value) setColor(data.value);
+        if (!data) return;
+        const map = {};
+        data.forEach((r) => { map[r.key] = r.value; });
+        setCachedSettings(map);
+        setSettings((prev) => ({
+          brand_color:         map.brand_color         || prev.brand_color,
+          brand_name:          map.brand_name          || prev.brand_name,
+          brand_tagline:       map.brand_tagline       || prev.brand_tagline,
+          admin_contact_name:  map.admin_contact_name  || prev.admin_contact_name,
+        }));
       });
   }, []);
-  return color;
+
+  return settings;
+}
+
+function useBrandColor() {
+  const { brand_color } = useBrandSettings();
+  return brand_color;
 }
 
 function shareProperty(property, setCopied) {
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const shareUrl = `${baseUrl}/listings?id=${property.id}`;
-  const shareTitle = `${property.title} | PropertyFlow`;
+  const brandName = getCachedSettings()?.brand_name || "PropertyFlow";
+  const shareTitle = `${property.title} | ${brandName}`;
   const shareText = `Check out this property: ${property.title} - ${fmtINR(property.price)} in ${property.location || "Kerala"}`;
 
   const copyToClipboard = () => {
@@ -299,7 +323,7 @@ ${property.location ? `Location: ${property.location}\n` : ""}${property.price ?
 function PropertyModal({ property, onClose }) {
   const [imgIdx, setImgIdx] = useState(0);
   const [copied, setCopied] = useState(false);
-  const brand = useBrandColor();
+  const { brand_color: brand, admin_contact_name: defaultAdminName } = useBrandSettings();
   const color = TYPE_COLORS[property.property_type] || TYPE_COLORS.apartment;
 
   const isAgent = property._source === "agent";
@@ -314,7 +338,7 @@ function PropertyModal({ property, onClose }) {
   const contactName = isAgent
     ? (property.profiles?.full_name || "Agent")
     : hideOwner
-    ? (property.admin_contact_name || "PropertyFlow Desk")
+    ? (property.admin_contact_name || defaultAdminName || "Support Desk")
     : (property.owner_name || "Owner");
   const baseUrl = typeof window !== "undefined" ? window.location.href.split('?')[0] : "";
 
@@ -528,7 +552,7 @@ function ListingsContent() {
   const [activeTab,        setActiveTab]         = useState("all"); // 'all' | 'buy' | 'rent'
 
   const gridRef = useRef(null);
-  const brand = useBrandColor();
+  const { brand_color: brand, brand_name: brandName, brand_tagline: brandTagline } = useBrandSettings();
 
   useEffect(() => {
     async function fetchProps() {
@@ -711,7 +735,7 @@ function ListingsContent() {
                 <span style={{ color: brand }}>Dream Property</span>
               </h1>
               <p className="text-[15px] text-white/75 leading-relaxed max-w-md mb-8">
-                Welcome to PropertyFlow — Kerala&apos;s trusted real estate platform. Browse thousands of plots, villas, apartments, and commercial spaces listed by verified agents.
+                Welcome to {brandName} — {brandTagline || "Kerala's trusted real estate platform"}. Browse thousands of plots, villas, apartments, and commercial spaces listed by verified agents.
               </p>
               {/* Stats */}
               <div className="flex flex-wrap gap-6 mb-6">

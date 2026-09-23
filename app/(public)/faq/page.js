@@ -60,8 +60,10 @@ function AccordionItem({ question, answer, color, isOpen, onToggle }) {
   );
 }
 
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
+
 export default function FAQPage() {
-  const [s, setS]         = useState(DEFAULTS);
+  const [s, setS]         = useState(() => mergeWithCache(DEFAULTS));
   const [openIdx, setOpen] = useState(0);
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function FAQPage() {
       if (!data) return;
       const map = {};
       data.forEach((r) => { map[r.key] = r.value; });
+      setCachedSettings(map);
       setS((prev) => ({ ...prev, ...map }));
     });
   }, []);

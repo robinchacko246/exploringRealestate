@@ -36,14 +36,17 @@ const DEFAULTS = {
   page_about_team_3_bio:    "Specializes in commercial and investment properties across South Kerala.",
 };
 
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
+
 export default function AboutPage() {
-  const [s, setS] = useState(DEFAULTS);
+  const [s, setS] = useState(() => mergeWithCache(DEFAULTS));
 
   useEffect(() => {
     supabase.from("admin_settings").select("key, value").then(({ data }) => {
       if (!data) return;
       const map = {};
       data.forEach((r) => { map[r.key] = r.value; });
+      setCachedSettings(map);
       setS((prev) => ({ ...prev, ...map }));
     });
   }, []);

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import MobileNav from "@/components/public/mobile-nav";
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -27,10 +28,90 @@ const DEFAULTS = {
   header_link_6_url:   "",
 };
 
-export default function PublicHeader() {
-  const [cfg, setCfg] = useState(DEFAULTS);
+// ── Agent Avatar Dropdown ─────────────────────────────────────────────────────
+import { useRef } from "react";
+import { useRouter } from "next/navigation";
+import { LayoutDashboard, LogOut, ChevronDown } from "lucide-react";
+
+function AgentMenu({ user, color, onSignOut }) {
+  const [open, setOpen] = useState(false);
+  const ref             = useRef(null);
 
   useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const email    = user?.email || "";
+  const name     = user?.user_metadata?.full_name || user?.user_metadata?.name || email.split("@")[0];
+  const initials = name.split(" ").slice(0, 2).map((w) => w[0] || "").join("").toUpperCase() || "AG";
+  const colorLight = `${color}18`;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-[#F5F5F5]"
+      >
+        <div
+          className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 select-none"
+          style={{ backgroundColor: color }}
+        >
+          {initials}
+        </div>
+        <div className="hidden lg:block text-left leading-tight">
+          <div className="text-[13px] font-semibold text-[#212121] max-w-[120px] truncate">{name}</div>
+          <div className="text-[10.5px] text-[#9E9E9E]">Agent</div>
+        </div>
+        <ChevronDown
+          className="h-3.5 w-3.5 text-[#9E9E9E] transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : "" }}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl bg-white border border-[#E8E8E8] shadow-xl py-2 z-50">
+          <div className="px-4 py-2 border-b border-[#F0F0F0]">
+            <div className="text-xs font-semibold text-[#212121] truncate">{name}</div>
+            <div className="text-[11px] text-[#9E9E9E] truncate mt-0.5">{email}</div>
+          </div>
+          <div className="pt-1">
+            <Link
+              href="/app"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-[#424242] hover:bg-[#F5F5F5] transition-colors"
+            >
+              <LayoutDashboard className="h-4 w-4" style={{ color }} />
+              Go to Dashboard
+            </Link>
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onSignOut(); }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-[#D32F2F] hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Header ───────────────────────────────────────────────────────────────
+export default function PublicHeader() {
+  const router = useRouter();
+
+  // ✅ Lazy initializer: reads localStorage cache SYNCHRONOUSLY on first render
+  // → no flash of default text on reload
+  const [cfg, setCfg] = useState(() => mergeWithCache(DEFAULTS));
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Fetch fresh settings from DB (stale-while-revalidate)
     supabase
       .from("admin_settings")
       .select("key, value")
@@ -38,9 +119,27 @@ export default function PublicHeader() {
         if (!data) return;
         const map = {};
         data.forEach((r) => { map[r.key] = r.value; });
+        setCachedSettings(map);          // ← save to cache for next load
         setCfg((prev) => ({ ...prev, ...map }));
       });
   }, []);
+
+  // Check auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user ?? false);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(false);
+    router.push("/listings");
+  };
 
   const color      = cfg.brand_color || "#009688";
   const colorLight = `${color}1A`;
@@ -97,7 +196,6 @@ export default function PublicHeader() {
               {label}
             </Link>
           ))}
-          {/* Sell / Rent */}
           <Link
             href="/sell"
             className="ml-1 px-4 py-2 text-[14px] font-semibold rounded transition-colors border"
@@ -117,24 +215,32 @@ export default function PublicHeader() {
 
         {/* Right actions */}
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            href="/agentscrm"
-            className="text-[13.5px] text-[#616161] hover:text-[#424242] transition-colors px-2"
-          >
-            For Agents
-          </Link>
-          <Link
-            href="/auth"
-            className="text-white text-[13.5px] font-semibold px-5 py-2 rounded transition-colors"
-            style={{ backgroundColor: color }}
-            onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(0.9)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
-          >
-            Agent Login
-          </Link>
+          {!user && (
+            <Link
+              href="/agentscrm"
+              className="text-[13.5px] text-[#616161] hover:text-[#424242] transition-colors px-2"
+            >
+              For Agents
+            </Link>
+          )}
+
+          {user === null ? (
+            <div className="h-8 w-24 rounded-xl bg-[#F0F0F0] animate-pulse" />
+          ) : user ? (
+            <AgentMenu user={user} color={color} onSignOut={handleSignOut} />
+          ) : (
+            <Link
+              href="/auth"
+              className="text-white text-[13.5px] font-semibold px-5 py-2 rounded transition-colors"
+              style={{ backgroundColor: color }}
+              onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(0.9)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+            >
+              Agent Login
+            </Link>
+          )}
         </div>
 
-        {/* Mobile nav */}
         <MobileNav headerLinks={headerLinks} color={color} />
       </div>
     </header>

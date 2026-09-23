@@ -585,7 +585,7 @@ export default function ModerationListingsPage() {
             // Sanitized owner phone for WhatsApp / Call
             const cleanPhone = (item.owner_phone || "").replace(/\D/g, "");
             const waPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-            const waMessage = `Hi ${item.owner_name}, regarding your property listing "${item.title}" on PropertyFlow:`;
+            const waMessage = `Hi ${item.owner_name}, regarding your property listing "${item.title}" on ${adminSettings?.brand_name || "PropertyFlow"}:`;
 
             return (
               <div

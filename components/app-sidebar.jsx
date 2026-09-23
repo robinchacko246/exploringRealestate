@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   Users,
@@ -51,6 +53,8 @@ const adminNav = [
   { title: "Settings",        url: "/app/admin/settings",       icon: Settings    },
 ];
 
+import { getCachedSettings, setCachedSettings } from "@/lib/brand-cache";
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -58,6 +62,26 @@ export function AppSidebar() {
   const { user } = useAuth();
   const { isAdmin, role } = useAdmin();
   const router = useRouter();
+
+  // ── Brand from admin_settings (initialized from cache to eliminate flash) ───
+  const [brandName,    setBrandName]    = useState(() => getCachedSettings()?.brand_name || "PropertyFlow");
+  const [brandTagline, setBrandTagline] = useState(() => getCachedSettings()?.brand_tagline || "Realtor CRM");
+
+  useEffect(() => {
+    const sb = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    );
+    sb.from("admin_settings").select("key, value").then(({ data }) => {
+      if (!data) return;
+      const map = {};
+      data.forEach((r) => { map[r.key] = r.value; });
+      setCachedSettings(map);
+      if (map.brand_name)    setBrandName(map.brand_name);
+      if (map.brand_tagline) setBrandTagline(map.brand_tagline);
+    });
+  }, []);
+  // ──────────────────────────────────────────────────────────────────────────
 
   const isActive = (url) =>
     url === "/app" ? pathname === "/app" : pathname.startsWith(url);
@@ -76,8 +100,8 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="font-display text-base font-bold text-sidebar-foreground">PropertyFlow</span>
-              <span className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">Realtor CRM</span>
+              <span className="font-display text-base font-bold text-sidebar-foreground">{brandName}</span>
+              <span className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">{brandTagline}</span>
             </div>
           )}
         </Link>

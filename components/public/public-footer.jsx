@@ -25,8 +25,10 @@ const DEFAULTS = {
   footer_link_4_url:   "",
 };
 
+import { mergeWithCache, setCachedSettings } from "@/lib/brand-cache";
+
 export default function PublicFooter() {
-  const [cfg, setCfg] = useState(DEFAULTS);
+  const [cfg, setCfg] = useState(() => mergeWithCache(DEFAULTS));
 
   useEffect(() => {
     supabase
@@ -36,6 +38,7 @@ export default function PublicFooter() {
         if (!data) return;
         const map = {};
         data.forEach((r) => { map[r.key] = r.value; });
+        setCachedSettings(map);
         setCfg((prev) => ({ ...prev, ...map }));
       });
   }, []);

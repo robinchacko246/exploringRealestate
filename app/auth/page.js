@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+// createClient used for brand fetching (same pattern as PublicHeader which works)
+import { createClient } from "@supabase/supabase-js";
+// supabase used for auth operations
 import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
@@ -12,54 +15,76 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// ── Fetch brand settings ───────────────────────────────────────────────────────
-async function fetchBrand() {
-  const { data } = await supabase.from("admin_settings").select("key, value");
-  const map = {};
-  (data ?? []).forEach((r) => { map[r.key] = r.value; });
-  return {
-    name:      map.brand_name      || "PropertyFlow",
-    color:     map.brand_color     || "#009688",
-    tagline:   map.brand_tagline   || "Kerala's #1 Property Platform",
-    copyright: map.footer_copyright || `© ${new Date().getFullYear()} PropertyFlow CRM`,
-  };
-}
+import { getCachedSettings, setCachedSettings } from "@/lib/brand-cache";
+
+// Separate client instance for reading admin_settings (proven to work in PublicHeader)
+const supabasePublic = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+);
+
+const BRAND_DEFAULTS = {
+  name:      "PropertyFlow",
+  color:     "#009688",
+  tagline:   "Kerala's #1 Property Platform",
+  copyright: `© ${new Date().getFullYear()} PropertyFlow CRM`,
+};
 
 export default function AuthPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [email, setEmail]     = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName]       = useState("");
+  const [name, setName]         = useState("");
 
-  // Brand state
-  const [brand, setBrand] = useState({
-    name: "PropertyFlow",
-    color: "#009688",
-    tagline: "Kerala's #1 Property Platform",
-    copyright: `© ${new Date().getFullYear()} PropertyFlow CRM`,
+  // Brand — initialized synchronously from cache to eliminate flash of default text
+  const [brand, setBrand] = useState(() => {
+    const cached = getCachedSettings();
+    return {
+      name:      cached?.brand_name       || BRAND_DEFAULTS.name,
+      color:     cached?.brand_color      || BRAND_DEFAULTS.color,
+      tagline:   cached?.brand_tagline    || BRAND_DEFAULTS.tagline,
+      copyright: cached?.footer_copyright || BRAND_DEFAULTS.copyright,
+    };
   });
 
   useEffect(() => {
-    // Load brand from DB
-    fetchBrand().then(setBrand);
+    // Fetch brand using the same direct createClient pattern as PublicHeader
+    supabasePublic
+      .from("admin_settings")
+      .select("key, value")
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn("[auth/brand]", error.message);
+          return;
+        }
+        if (!data) return;
+        const map = {};
+        data.forEach((r) => { map[r.key] = r.value; });
+        setCachedSettings(map);
+        setBrand({
+          name:      map.brand_name       || BRAND_DEFAULTS.name,
+          color:     map.brand_color      || BRAND_DEFAULTS.color,
+          tagline:   map.brand_tagline    || BRAND_DEFAULTS.tagline,
+          copyright: map.footer_copyright || BRAND_DEFAULTS.copyright,
+        });
+      });
 
+    // Auth state listener — redirect to /app if already signed in
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED")) {
         router.replace("/app");
       }
     });
 
-    // Check for OAuth error parameters in URL query/hash
+    // Check for OAuth error parameters in URL
     if (typeof window !== "undefined") {
-      const hash = window.location.hash;
+      const hash   = window.location.hash;
       const search = window.location.search;
       if (hash.includes("error") || search.includes("error")) {
-        const params = new URLSearchParams(hash.replace("#", "?") || search);
+        const params    = new URLSearchParams(hash.replace("#", "?") || search);
         const errorDesc = params.get("error_description") || params.get("error");
-        if (errorDesc) {
-          toast.error(`Authentication failed: ${decodeURIComponent(errorDesc)}`);
-        }
+        if (errorDesc) toast.error(`Authentication failed: ${decodeURIComponent(errorDesc)}`);
       }
     }
 
@@ -114,14 +139,10 @@ export default function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/app`,
-        },
+        options: { redirectTo: `${window.location.origin}/app` },
       });
       if (error) {
-        toast.error(
-          error.message || "Google sign-in failed. Please verify Google OAuth is enabled in Supabase."
-        );
+        toast.error(error.message || "Google sign-in failed. Please verify Google OAuth is enabled in Supabase.");
       }
     } catch (err) {
       toast.error(err?.message || "Google sign-in failed");
@@ -130,16 +151,9 @@ export default function AuthPage() {
     }
   };
 
-  // Derive initials for avatar
-  const initials = brand.name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      {/* ── Left brand panel ──────────────────────────────────────────── */}
+      {/* ── Left brand panel ────────────────────────────────────────────── */}
       <div
         className="relative hidden flex-col justify-between p-12 text-white lg:flex"
         style={{
@@ -152,7 +166,6 @@ export default function AuthPage() {
             className="grid h-9 w-9 place-items-center rounded-lg"
             style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
           >
-            {/* House icon */}
             <svg width="20" height="20" viewBox="0 0 34 34" fill="none">
               <path d="M7 17L17 8L27 17" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               <rect x="12" y="17" width="10" height="9" rx="1" fill="white" />
@@ -188,7 +201,7 @@ export default function AuthPage() {
         <div className="text-xs text-white/40">{brand.copyright}</div>
       </div>
 
-      {/* ── Right form ────────────────────────────────────────────────── */}
+      {/* ── Right form ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
@@ -203,11 +216,11 @@ export default function AuthPage() {
                 <rect x="15" y="20" width="4" height="6" rx="0.5" fill={brand.color} />
               </svg>
             </div>
-            <span className="font-bold">{brand.name}</span>
+            <span className="font-bold" style={{ color: brand.color }}>{brand.name}</span>
           </Link>
 
           <h1 className="text-3xl font-bold tracking-tight">Welcome</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in or create your agent account.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in or create your {brand.name} agent account.</p>
 
           <Button
             variant="outline"
@@ -233,6 +246,7 @@ export default function AuthPage() {
               <TabsTrigger value="signin">Sign in</TabsTrigger>
               <TabsTrigger value="signup">Sign up</TabsTrigger>
             </TabsList>
+
             <TabsContent value="signin" className="mt-4">
               <form onSubmit={handleSignIn} className="space-y-3">
                 <div>
@@ -253,6 +267,7 @@ export default function AuthPage() {
                 </Button>
               </form>
             </TabsContent>
+
             <TabsContent value="signup" className="mt-4">
               <form onSubmit={handleSignUp} className="space-y-3">
                 <div>
