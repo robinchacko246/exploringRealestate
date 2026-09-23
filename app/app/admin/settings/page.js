@@ -21,6 +21,8 @@ import {
   Bell,
   Building2,
   ExternalLink,
+  FileText,
+  Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,6 +34,7 @@ const TABS = [
   { id: "footer",        label: "Footer",        icon: Link2      },
   { id: "listings",      label: "Listings",      icon: Building2  },
   { id: "notifications", label: "Notifications", icon: Bell       },
+  { id: "pages",         label: "Pages",         icon: Globe      },
 ];
 
 const DEFAULTS = {
@@ -71,6 +74,53 @@ const DEFAULTS = {
   admin_notification_email: "",
   notify_on_new_submission: "true",
   notify_on_enquiry:        "true",
+  // ── Pages ───────────────────────────────────────────────────────────────────
+  page_about_title:         "About Us",
+  page_about_subtitle:      "Building Kerala's most trusted real estate platform",
+  page_about_story:         "Founded in 2020, PropertyFlow has helped thousands of families find their dream homes across Kerala.",
+  page_about_mission:       "To make property transactions transparent, efficient, and stress-free for every family in Kerala.",
+  page_about_vision:        "A Kerala where every family finds their dream home with ease and confidence.",
+  page_about_stat_1_label:  "Founded",        page_about_stat_1_value: "2020",
+  page_about_stat_2_label:  "Properties Sold",page_about_stat_2_value: "2,500+",
+  page_about_stat_3_label:  "Happy Clients",  page_about_stat_3_value: "1,800+",
+  page_about_stat_4_label:  "Cities Covered", page_about_stat_4_value: "15+",
+  page_about_team_1_name:   "Robin Chacko",   page_about_team_1_role: "Founder & CEO",       page_about_team_1_bio: "15 years in Kerala real estate.",
+  page_about_team_2_name:   "Priya Menon",    page_about_team_2_role: "Head of Sales",       page_about_team_2_bio: "Expert in residential properties across Kochi and Thrissur.",
+  page_about_team_3_name:   "Arjun Nair",     page_about_team_3_role: "Lead Agent",          page_about_team_3_bio: "Specializes in commercial and investment properties.",
+  page_services_title:      "Our Services",
+  page_services_subtitle:   "Everything you need for a seamless property journey",
+  page_services_1_title: "Buy a Property",    page_services_1_desc: "Browse thousands of verified listings.",    page_services_1_icon: "home",   page_services_1_url: "/listings",
+  page_services_2_title: "Sell / Rent",        page_services_2_desc: "List your property and reach buyers.",      page_services_2_icon: "tag",    page_services_2_url: "/sell",
+  page_services_3_title: "Property Valuation", page_services_3_desc: "Get an accurate market value estimate.",    page_services_3_icon: "chart",  page_services_3_url: "/contact",
+  page_services_4_title: "Legal Assistance",   page_services_4_desc: "End-to-end legal support for transactions.",page_services_4_icon: "shield", page_services_4_url: "/contact",
+  page_services_5_title: "Home Loans",         page_services_5_desc: "Pre-approved loans from top banks.",        page_services_5_icon: "bank",   page_services_5_url: "/contact",
+  page_services_6_title: "Interior Design",    page_services_6_desc: "Transform your home with expert designers.",page_services_6_icon: "palette",page_services_6_url: "/contact",
+  page_contact_title:    "Contact Us",
+  page_contact_subtitle: "We're here to help you find your dream property",
+  page_contact_address:  "123 MG Road, Kochi, Kerala 682011",
+  page_contact_hours:    "Mon–Sat: 9am–6pm IST",
+  page_contact_map_url:  "",
+  page_faq_title:    "Frequently Asked Questions",
+  page_faq_subtitle: "Got questions? We have answers.",
+  page_faq_1_q: "How do I list my property?",             page_faq_1_a: "Visit our Sell page, fill in details, and submit. We publish within 24 hours.",
+  page_faq_2_q: "Is it free to browse listings?",         page_faq_2_a: "Yes! Browsing all listings is completely free. No registration required.",
+  page_faq_3_q: "How do I contact a property owner?",     page_faq_3_a: "Each listing has a WhatsApp and call button to connect instantly.",
+  page_faq_4_q: "Are the listings verified?",             page_faq_4_a: "All listings go through our verification process before going live.",
+  page_faq_5_q: "How long to publish my listing?",        page_faq_5_a: "Listings are reviewed and published within 24 hours on business days.",
+  page_faq_6_q: "Can I edit my listing?",                 page_faq_6_a: "Yes. Use the Track Status page with your submission ID to request edits.",
+  page_faq_7_q: "What areas do you cover?",               page_faq_7_a: "All major cities and districts in Kerala including Kochi, Trivandrum, Calicut, Thrissur.",
+  page_faq_8_q: "How do I get a valuation?",              page_faq_8_a: "Contact us via WhatsApp with property details. Free estimate within 48 hours.",
+  page_testimonials_title:    "What Our Clients Say",
+  page_testimonials_subtitle: "Real stories from families and investors",
+  page_testimonials_1_name: "Anand Jose",    page_testimonials_1_role: "Broker, Kochi",              page_testimonials_1_text: "I stopped losing leads in WhatsApp the day I switched to PropertyFlow.",          page_testimonials_1_rating: "5",
+  page_testimonials_2_name: "Meena Krishnan",page_testimonials_2_role: "Homebuyer, Thrissur",         page_testimonials_2_text: "Found my dream 3BHK apartment within 2 weeks! Highly recommend.",                page_testimonials_2_rating: "5",
+  page_testimonials_3_name: "Suresh Pillai", page_testimonials_3_role: "Investor, Trivandrum",        page_testimonials_3_text: "Sold my commercial property in a month at a great price.",                       page_testimonials_3_rating: "5",
+  page_testimonials_4_name: "Divya Thomas",  page_testimonials_4_role: "Villa Owner, Kochi",          page_testimonials_4_text: "Listed my villa in the morning and got 5 enquiries by evening.",                page_testimonials_4_rating: "5",
+  page_testimonials_5_name: "Rahul Varma",   page_testimonials_5_role: "NRI Buyer, Dubai",             page_testimonials_5_text: "As an NRI, PropertyFlow made finding trustworthy listings so easy.",             page_testimonials_5_rating: "5",
+  page_testimonials_6_name: "Lakshmi Nair",  page_testimonials_6_role: "Plot Buyer, Calicut",         page_testimonials_6_text: "The site is clean, listings are real, and support was excellent.",                page_testimonials_6_rating: "5",
+  page_privacy_title:   "Privacy Policy",
+  page_privacy_updated: "September 2026",
+  page_privacy_content: "**Information We Collect**\nWe collect your name, email, phone, and property details when you submit a listing or enquiry.\n\n**How We Use Your Information**\nWe use it to connect buyers with sellers, send submission updates, and improve our services.\n\n**Data Security**\nWe use SSL encryption and industry-standard security to protect your data. We never sell your information.\n\n**Contact**\nFor privacy queries, contact us via our Contact page.",
 };
 
 // ── Shared UI primitives ──────────────────────────────────────────────────────
@@ -178,7 +228,10 @@ export default function AdminSettingsPage() {
   const [dirty, setDirty] = useState({
     contact: false, branding: false, header_nav: false, footer: false,
     listings: false, notifications: false,
+    pages_about: false, pages_services: false, pages_contact: false,
+    pages_faq: false, pages_testimonials: false, pages_privacy: false,
   });
+  const [pagesSubTab, setPagesSubTab] = useState("about");
 
   // ── Fetch from DB ──────────────────────────────────────────────────────────
   const { data: dbSettings, isLoading } = useQuery({
@@ -198,7 +251,12 @@ export default function AdminSettingsPage() {
   useEffect(() => {
     if (dbSettings) {
       setS((prev) => ({ ...prev, ...dbSettings }));
-      setDirty({ contact: false, branding: false, header_nav: false, footer: false, listings: false, notifications: false });
+      setDirty({
+        contact: false, branding: false, header_nav: false, footer: false,
+        listings: false, notifications: false,
+        pages_about: false, pages_services: false, pages_contact: false,
+        pages_faq: false, pages_testimonials: false, pages_privacy: false,
+      });
     }
   }, [dbSettings]);
 
@@ -739,6 +797,202 @@ export default function AdminSettingsPage() {
           <SaveBar dirty={dirty.notifications} isPending={notifMut.isPending} onSave={() => notifMut.mutate()} />
         </SectionCard>
       )}
+
+      {/* ── PAGES TAB ───────────────────────────────────────────────────────── */}
+      {activeTab === "pages" && (() => {
+        // ── per-section mutations ───────────────────────────────────────────
+        const ABOUT_KEYS = [
+          "page_about_title","page_about_subtitle","page_about_story","page_about_mission","page_about_vision",
+          "page_about_stat_1_label","page_about_stat_1_value","page_about_stat_2_label","page_about_stat_2_value",
+          "page_about_stat_3_label","page_about_stat_3_value","page_about_stat_4_label","page_about_stat_4_value",
+          "page_about_team_1_name","page_about_team_1_role","page_about_team_1_bio",
+          "page_about_team_2_name","page_about_team_2_role","page_about_team_2_bio",
+          "page_about_team_3_name","page_about_team_3_role","page_about_team_3_bio",
+        ];
+        const SERVICES_KEYS = [
+          "page_services_title","page_services_subtitle",
+          ...([1,2,3,4,5,6].flatMap(n => [
+            `page_services_${n}_title`,`page_services_${n}_desc`,`page_services_${n}_icon`,`page_services_${n}_url`
+          ])),
+        ];
+        const CONTACT_KEYS  = ["page_contact_title","page_contact_subtitle","page_contact_address","page_contact_hours","page_contact_map_url"];
+        const FAQ_KEYS      = ["page_faq_title","page_faq_subtitle",...([1,2,3,4,5,6,7,8].flatMap(n=>[`page_faq_${n}_q`,`page_faq_${n}_a`]))];
+        const TEST_KEYS     = ["page_testimonials_title","page_testimonials_subtitle",...([1,2,3,4,5,6].flatMap(n=>[`page_testimonials_${n}_name`,`page_testimonials_${n}_role`,`page_testimonials_${n}_text`,`page_testimonials_${n}_rating`]))];
+        const PRIVACY_KEYS  = ["page_privacy_title","page_privacy_updated","page_privacy_content"];
+
+        // We use inline mutations via supabase since hooks can't be called conditionally
+        const saveSection = async (keys, dirtyKey) => {
+          try {
+            await upsertKeys(keys);
+            toast.success("Page content saved!");
+            queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+            setDirty((d) => ({ ...d, [dirtyKey]: false }));
+          } catch(err) {
+            toast.error(`Failed to save: ${err.message}`);
+          }
+        };
+
+        const SUB_TABS = [
+          { id: "about",        label: "About Us",      dirtyKey: "pages_about",        keys: ABOUT_KEYS    },
+          { id: "services",     label: "Services",      dirtyKey: "pages_services",     keys: SERVICES_KEYS },
+          { id: "contact",      label: "Contact",       dirtyKey: "pages_contact",      keys: CONTACT_KEYS  },
+          { id: "faq",          label: "FAQ",           dirtyKey: "pages_faq",          keys: FAQ_KEYS      },
+          { id: "testimonials", label: "Testimonials",  dirtyKey: "pages_testimonials", keys: TEST_KEYS     },
+          { id: "privacy",      label: "Privacy",       dirtyKey: "pages_privacy",      keys: PRIVACY_KEYS  },
+        ];
+        const cur = SUB_TABS.find((t) => t.id === pagesSubTab) || SUB_TABS[0];
+
+        return (
+          <SectionCard>
+            <SectionTitle icon={Globe}>Page Content</SectionTitle>
+            <p className="text-xs text-muted-foreground">
+              Edit the content displayed on each public page. Changes are saved per section.
+            </p>
+
+            {/* Sub-tabs */}
+            <div className="flex flex-wrap gap-1.5 p-1 rounded-xl bg-muted/30 border border-border">
+              {SUB_TABS.map(({ id, label, dirtyKey }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setPagesSubTab(id)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+                    pagesSubTab === id
+                      ? "bg-card shadow-sm text-amber-600 border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {label}
+                  {dirty[dirtyKey] && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* ── About sub-tab ──────────────────────────────────────── */}
+            {pagesSubTab === "about" && (
+              <div className="space-y-4 pt-1">
+                <Field label="Page Title"><TextInput type="text" value={s.page_about_title}    onChange={(e) => update("page_about_title",    e.target.value, "pages_about")} placeholder="About Us" /></Field>
+                <Field label="Subtitle">  <TextInput type="text" value={s.page_about_subtitle} onChange={(e) => update("page_about_subtitle", e.target.value, "pages_about")} placeholder="Building Kerala's most trusted platform" /></Field>
+                <Field label="Our Story (paragraph)"><textarea rows={4} value={s.page_about_story} onChange={(e) => update("page_about_story", e.target.value, "pages_about")} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none" /></Field>
+                <Field label="Mission Statement"><TextInput type="text" value={s.page_about_mission} onChange={(e) => update("page_about_mission", e.target.value, "pages_about")} /></Field>
+                <Field label="Vision Statement"> <TextInput type="text" value={s.page_about_vision}  onChange={(e) => update("page_about_vision",  e.target.value, "pages_about")} /></Field>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Stats (4 items)</p>
+                {[1,2,3,4].map((n) => (
+                  <div key={n} className="grid grid-cols-2 gap-3">
+                    <Field label={`Stat ${n} Label`}><TextInput type="text" value={s[`page_about_stat_${n}_label`]} onChange={(e) => update(`page_about_stat_${n}_label`, e.target.value, "pages_about")} placeholder="Founded" /></Field>
+                    <Field label={`Stat ${n} Value`}><TextInput type="text" value={s[`page_about_stat_${n}_value`]} onChange={(e) => update(`page_about_stat_${n}_value`, e.target.value, "pages_about")} placeholder="2020" /></Field>
+                  </div>
+                ))}
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Team Members (up to 3)</p>
+                {[1,2,3].map((n) => (
+                  <div key={n} className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                    <Field label={`Member ${n} Name`}><TextInput icon={User} type="text" value={s[`page_about_team_${n}_name`]} onChange={(e) => update(`page_about_team_${n}_name`, e.target.value, "pages_about")} /></Field>
+                    <Field label={`Member ${n} Role`}><TextInput type="text" value={s[`page_about_team_${n}_role`]} onChange={(e) => update(`page_about_team_${n}_role`, e.target.value, "pages_about")} /></Field>
+                    <Field label={`Member ${n} Bio`}> <TextInput type="text" value={s[`page_about_team_${n}_bio`]}  onChange={(e) => update(`page_about_team_${n}_bio`,  e.target.value, "pages_about")} /></Field>
+                  </div>
+                ))}
+                <SaveBar dirty={dirty.pages_about} isPending={false} onSave={() => saveSection(ABOUT_KEYS, "pages_about")} />
+              </div>
+            )}
+
+            {/* ── Services sub-tab ───────────────────────────────────── */}
+            {pagesSubTab === "services" && (
+              <div className="space-y-4 pt-1">
+                <Field label="Page Title"><TextInput type="text" value={s.page_services_title}    onChange={(e) => update("page_services_title",    e.target.value, "pages_services")} placeholder="Our Services" /></Field>
+                <Field label="Subtitle">  <TextInput type="text" value={s.page_services_subtitle} onChange={(e) => update("page_services_subtitle", e.target.value, "pages_services")} /></Field>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Services (up to 6)</p>
+                {[1,2,3,4,5,6].map((n) => (
+                  <div key={n} className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label={`Service ${n} Title`}><TextInput type="text" value={s[`page_services_${n}_title`]} onChange={(e) => update(`page_services_${n}_title`, e.target.value, "pages_services")} /></Field>
+                      <Field label={`Service ${n} Icon`}  hint="home|tag|chart|shield|bank|palette"><TextInput type="text" value={s[`page_services_${n}_icon`]}  onChange={(e) => update(`page_services_${n}_icon`,  e.target.value, "pages_services")} placeholder="home" /></Field>
+                    </div>
+                    <Field label={`Service ${n} Description`}><TextInput type="text" value={s[`page_services_${n}_desc`]} onChange={(e) => update(`page_services_${n}_desc`, e.target.value, "pages_services")} /></Field>
+                    <Field label={`Service ${n} Link URL`}><TextInput icon={ExternalLink} type="text" value={s[`page_services_${n}_url`]}  onChange={(e) => update(`page_services_${n}_url`,  e.target.value, "pages_services")} placeholder="/listings" /></Field>
+                  </div>
+                ))}
+                <SaveBar dirty={dirty.pages_services} isPending={false} onSave={() => saveSection(SERVICES_KEYS, "pages_services")} />
+              </div>
+            )}
+
+            {/* ── Contact sub-tab ────────────────────────────────────── */}
+            {pagesSubTab === "contact" && (
+              <div className="space-y-4 pt-1">
+                <Field label="Page Title"><TextInput type="text" value={s.page_contact_title}    onChange={(e) => update("page_contact_title",    e.target.value, "pages_contact")} placeholder="Contact Us" /></Field>
+                <Field label="Subtitle">  <TextInput type="text" value={s.page_contact_subtitle} onChange={(e) => update("page_contact_subtitle", e.target.value, "pages_contact")} /></Field>
+                <Field label="Office Address"><TextInput type="text" value={s.page_contact_address} onChange={(e) => update("page_contact_address", e.target.value, "pages_contact")} placeholder="123 MG Road, Kochi" /></Field>
+                <Field label="Office Hours">  <TextInput icon={Clock} type="text" value={s.page_contact_hours}   onChange={(e) => update("page_contact_hours",   e.target.value, "pages_contact")} placeholder="Mon–Sat: 9am–6pm" /></Field>
+                <Field label="Google Maps Embed URL" hint="Paste the src URL from Google Maps embed iframe (optional).">
+                  <TextInput icon={ExternalLink} type="text" value={s.page_contact_map_url} onChange={(e) => update("page_contact_map_url", e.target.value, "pages_contact")} placeholder="https://www.google.com/maps/embed?pb=..." />
+                </Field>
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+                  Phone, Email, and WhatsApp are configured under the <strong>Branding</strong> tab and will appear automatically on the Contact page.
+                </div>
+                <SaveBar dirty={dirty.pages_contact} isPending={false} onSave={() => saveSection(CONTACT_KEYS, "pages_contact")} />
+              </div>
+            )}
+
+            {/* ── FAQ sub-tab ────────────────────────────────────────── */}
+            {pagesSubTab === "faq" && (
+              <div className="space-y-4 pt-1">
+                <Field label="Page Title"><TextInput type="text" value={s.page_faq_title}    onChange={(e) => update("page_faq_title",    e.target.value, "pages_faq")} placeholder="Frequently Asked Questions" /></Field>
+                <Field label="Subtitle">  <TextInput type="text" value={s.page_faq_subtitle} onChange={(e) => update("page_faq_subtitle", e.target.value, "pages_faq")} /></Field>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Q&amp;A Items (up to 8)</p>
+                {[1,2,3,4,5,6,7,8].map((n) => (
+                  <div key={n} className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                    <Field label={`Q${n} — Question`}><TextInput type="text" value={s[`page_faq_${n}_q`]} onChange={(e) => update(`page_faq_${n}_q`, e.target.value, "pages_faq")} placeholder="How do I list my property?" /></Field>
+                    <Field label={`Q${n} — Answer`}>
+                      <textarea rows={2} value={s[`page_faq_${n}_a`]} onChange={(e) => update(`page_faq_${n}_a`, e.target.value, "pages_faq")} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none" />
+                    </Field>
+                  </div>
+                ))}
+                <SaveBar dirty={dirty.pages_faq} isPending={false} onSave={() => saveSection(FAQ_KEYS, "pages_faq")} />
+              </div>
+            )}
+
+            {/* ── Testimonials sub-tab ───────────────────────────────── */}
+            {pagesSubTab === "testimonials" && (
+              <div className="space-y-4 pt-1">
+                <Field label="Page Title"><TextInput type="text" value={s.page_testimonials_title}    onChange={(e) => update("page_testimonials_title",    e.target.value, "pages_testimonials")} /></Field>
+                <Field label="Subtitle">  <TextInput type="text" value={s.page_testimonials_subtitle} onChange={(e) => update("page_testimonials_subtitle", e.target.value, "pages_testimonials")} /></Field>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground pt-2">Testimonials (up to 6)</p>
+                {[1,2,3,4,5,6].map((n) => (
+                  <div key={n} className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label={`#${n} Name`}>   <TextInput icon={User} type="text" value={s[`page_testimonials_${n}_name`]}   onChange={(e) => update(`page_testimonials_${n}_name`,   e.target.value, "pages_testimonials")} /></Field>
+                      <Field label={`#${n} Role`}>   <TextInput type="text" value={s[`page_testimonials_${n}_role`]}   onChange={(e) => update(`page_testimonials_${n}_role`,   e.target.value, "pages_testimonials")} placeholder="Broker, Kochi" /></Field>
+                    </div>
+                    <Field label={`#${n} Testimonial Text`}>
+                      <textarea rows={2} value={s[`page_testimonials_${n}_text`]} onChange={(e) => update(`page_testimonials_${n}_text`, e.target.value, "pages_testimonials")} className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none" />
+                    </Field>
+                    <Field label={`#${n} Rating (1–5)`}><TextInput type="number" min="1" max="5" value={s[`page_testimonials_${n}_rating`]} onChange={(e) => update(`page_testimonials_${n}_rating`, e.target.value, "pages_testimonials")} /></Field>
+                  </div>
+                ))}
+                <SaveBar dirty={dirty.pages_testimonials} isPending={false} onSave={() => saveSection(TEST_KEYS, "pages_testimonials")} />
+              </div>
+            )}
+
+            {/* ── Privacy sub-tab ────────────────────────────────────── */}
+            {pagesSubTab === "privacy" && (
+              <div className="space-y-4 pt-1">
+                <Field label="Page Title"><TextInput type="text" value={s.page_privacy_title}   onChange={(e) => update("page_privacy_title",   e.target.value, "pages_privacy")} placeholder="Privacy Policy" /></Field>
+                <Field label="Last Updated"><TextInput type="text" value={s.page_privacy_updated} onChange={(e) => update("page_privacy_updated", e.target.value, "pages_privacy")} placeholder="September 2026" /></Field>
+                <Field label="Content" hint="Use **bold text** for headings. Separate sections with a blank line.">
+                  <textarea
+                    rows={16}
+                    value={s.page_privacy_content}
+                    onChange={(e) => update("page_privacy_content", e.target.value, "pages_privacy")}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500 resize-y"
+                  />
+                </Field>
+                <SaveBar dirty={dirty.pages_privacy} isPending={false} onSave={() => saveSection(PRIVACY_KEYS, "pages_privacy")} />
+              </div>
+            )}
+          </SectionCard>
+        );
+      })()}
     </div>
   );
 }

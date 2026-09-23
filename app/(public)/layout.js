@@ -3,7 +3,7 @@
 import PublicHeader from "@/components/public/public-header";
 import PublicFooter from "@/components/public/public-footer";
 
-export default function ListingsLayout({ children }) {
+export default function PublicLayout({ children }) {
   return (
     <div className="min-h-screen bg-[#F5F7FA] text-[#212121]">
       <PublicHeader />

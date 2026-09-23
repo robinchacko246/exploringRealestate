@@ -9,17 +9,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+
+// ── Fetch brand settings ───────────────────────────────────────────────────────
+async function fetchBrand() {
+  const { data } = await supabase.from("admin_settings").select("key, value");
+  const map = {};
+  (data ?? []).forEach((r) => { map[r.key] = r.value; });
+  return {
+    name:      map.brand_name      || "PropertyFlow",
+    color:     map.brand_color     || "#009688",
+    tagline:   map.brand_tagline   || "Kerala's #1 Property Platform",
+    copyright: map.footer_copyright || `© ${new Date().getFullYear()} PropertyFlow CRM`,
+  };
+}
 
 export default function AuthPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName]       = useState("");
+
+  // Brand state
+  const [brand, setBrand] = useState({
+    name: "PropertyFlow",
+    color: "#009688",
+    tagline: "Kerala's #1 Property Platform",
+    copyright: `© ${new Date().getFullYear()} PropertyFlow CRM`,
+  });
 
   useEffect(() => {
+    // Load brand from DB
+    fetchBrand().then(setBrand);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED")) {
         router.replace("/app");
@@ -106,54 +130,83 @@ export default function AuthPage() {
     }
   };
 
+  // Derive initials for avatar
+  const initials = brand.name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left brand panel */}
+      {/* ── Left brand panel ──────────────────────────────────────────── */}
       <div
-        className="relative hidden flex-col justify-between p-12 text-sidebar-foreground lg:flex"
-        style={{ background: "var(--gradient-hero)" }}
+        className="relative hidden flex-col justify-between p-12 text-white lg:flex"
+        style={{
+          background: `linear-gradient(135deg, ${brand.color}ee 0%, ${brand.color}99 60%, #0a0a1a 100%)`,
+        }}
       >
-        <Link href="/" className="flex items-center gap-2">
+        {/* Logo */}
+        <Link href="/listings" className="flex items-center gap-2">
           <div
             className="grid h-9 w-9 place-items-center rounded-lg"
-            style={{ background: "var(--gradient-primary)" }}
+            style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
           >
-            <Sparkles className="h-5 w-5 text-primary-foreground" />
+            {/* House icon */}
+            <svg width="20" height="20" viewBox="0 0 34 34" fill="none">
+              <path d="M7 17L17 8L27 17" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="12" y="17" width="10" height="9" rx="1" fill="white" />
+              <rect x="15" y="20" width="4" height="6" rx="0.5" fill={brand.color} />
+            </svg>
           </div>
           <div className="leading-tight">
-            <div className="font-display text-lg font-bold">PropertyFlow</div>
-            <div className="text-[10px] uppercase tracking-widest text-sidebar-foreground/60">Realtor CRM</div>
+            <div className="text-lg font-bold">{brand.name}</div>
+            <div className="text-[10px] uppercase tracking-widest text-white/60">Realtor CRM</div>
           </div>
         </Link>
+
+        {/* Testimonial */}
         <div className="space-y-6">
-          <h2 className="font-display text-4xl font-bold leading-tight">
-            "I stopped losing leads in WhatsApp the day I switched to PropertyFlow."
+          <h2 className="text-4xl font-bold leading-tight">
+            &ldquo;I stopped losing leads in WhatsApp the day I switched to {brand.name}.&rdquo;
           </h2>
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/30 font-semibold">AJ</div>
+            <div
+              className="grid h-10 w-10 place-items-center rounded-full font-semibold text-sm"
+              style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
+            >
+              AJ
+            </div>
             <div>
               <div className="font-medium">Anand Jose</div>
-              <div className="text-xs text-sidebar-foreground/60">Broker, Kochi</div>
+              <div className="text-xs text-white/60">Broker, Kochi</div>
             </div>
           </div>
         </div>
-        <div className="text-xs text-sidebar-foreground/40">© PropertyFlow CRM</div>
+
+        {/* Footer copyright */}
+        <div className="text-xs text-white/40">{brand.copyright}</div>
       </div>
 
-      {/* Right form */}
+      {/* ── Right form ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm">
-          <Link href="/" className="mb-8 flex items-center gap-2 lg:hidden">
+          {/* Mobile logo */}
+          <Link href="/listings" className="mb-8 flex items-center gap-2 lg:hidden">
             <div
               className="grid h-8 w-8 place-items-center rounded-lg"
-              style={{ background: "var(--gradient-primary)" }}
+              style={{ backgroundColor: brand.color }}
             >
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
+              <svg width="16" height="16" viewBox="0 0 34 34" fill="none">
+                <path d="M7 17L17 8L27 17" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <rect x="12" y="17" width="10" height="9" rx="1" fill="white" />
+                <rect x="15" y="20" width="4" height="6" rx="0.5" fill={brand.color} />
+              </svg>
             </div>
-            <span className="font-display font-bold">PropertyFlow</span>
+            <span className="font-bold">{brand.name}</span>
           </Link>
 
-          <h1 className="font-display text-3xl font-bold tracking-tight">Welcome</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in or create your agent account.</p>
 
           <Button
@@ -190,7 +243,12 @@ export default function AuthPage() {
                   <Label htmlFor="pwd-in">Password</Label>
                   <Input id="pwd-in" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full text-white"
+                  style={{ backgroundColor: brand.color }}
+                >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
                 </Button>
               </form>
@@ -209,7 +267,12 @@ export default function AuthPage() {
                   <Label htmlFor="pwd-up">Password</Label>
                   <Input id="pwd-up" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full text-white"
+                  style={{ backgroundColor: brand.color }}
+                >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create account"}
                 </Button>
               </form>
